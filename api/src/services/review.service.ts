@@ -66,7 +66,17 @@ type CaseListRow = {
   }>;
   guide_review_cases: {
     guide_revision_id: string;
-    guide_revisions: { title: string | null; summary: string | null } | null;
+    guide_revisions: {
+      title: string | null;
+      summary: string | null;
+      guide_id: string;
+      guides: {
+        guide_base_id: string;
+        guide_bases: {
+          canonical_guide_id: string | null;
+        } | null;
+      } | null;
+    } | null;
   } | null;
 };
 
@@ -231,9 +241,19 @@ export async function listReviewCases(supabase: DB) {
       `id, case_type, status, created_at, created_by, time_limit, updated_at,
        review_panels(id, target_seat_count, outcome, opened_at, closed_at),
        guide_review_cases(
-         guide_revision_id,
-         guide_revisions(title, summary)
-       )`
+        guide_revision_id,
+        guide_revisions(
+          title,
+          summary,
+          guide_id,
+          guides!guide_revisions_guide_id_fkey(
+            guide_base_id,
+            guide_bases!guides_guide_base_id_fkey(
+              canonical_guide_id
+            )
+          )
+        )
+      )`
     )
     .in("status", ["approved", "rejected"])
     .order("updated_at", { ascending: false });
@@ -245,13 +265,21 @@ export async function listReviewCases(supabase: DB) {
 
   const rows = (raw ?? []) as unknown as CaseListRow[];
 
-  return rows.map((c) => ({
-    id: c.id,
-    case_type: c.case_type,
-    status: c.status,
-    title: c.guide_review_cases?.guide_revisions?.title ?? null,
-    created_at: c.created_at,
-  }));
+  return rows.map((c) => {
+    const revision = c.guide_review_cases?.guide_revisions;
+    const guideId = revision?.guide_id ?? null;
+    const canonicalId =
+      revision?.guides?.guide_bases?.canonical_guide_id ?? null;
+
+    return {
+      id: c.id,
+      case_type: c.case_type,
+      status: c.status,
+      title: revision?.title ?? null,
+      is_variant: canonicalId != null && canonicalId !== guideId,
+      created_at: c.created_at,
+    };
+  });
 }
 
 // The knowledge type, tags, and edges a revision proposes. Uses service client
