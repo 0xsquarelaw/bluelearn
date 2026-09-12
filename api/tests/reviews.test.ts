@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import app from "../src/index";
-import { admin, env, jsonAuth, makeUser, type Insert } from "./helpers";
+import { admin, auth, env, jsonAuth, makeUser, type Insert } from "./helpers";
 import { assemblePendingPanels } from "../src/services/review.service";
 import {
   createReviewCase,
@@ -45,6 +45,52 @@ async function seedQueueCase(
   }
   await createGuideReviewCase(reviewCase.id, revision.id);
   return reviewCase;
+}
+
+async function seedQueueCaseWithVariant(opts: {
+  userId: string;
+  title: string;
+  caseType: Insert<"review_cases">["case_type"];
+  isVariant: boolean;
+  isOfficialBase?: boolean;
+  status?: Insert<"review_cases">["status"];
+}) {
+  const {
+    userId,
+    title,
+    caseType,
+    isVariant,
+    isOfficialBase = false,
+    status = "pending",
+  } = opts;
+
+  const base = await createGuideBase({
+    is_official: isOfficialBase,
+    ...(isOfficialBase ? { status: "published" } : {}),
+  });
+  const canonicalGuide = await createGuide(base.id);
+
+  const targetGuide = isVariant
+    ? await createGuide(base.id, { slug: `variant-${crypto.randomUUID()}` })
+    : canonicalGuide;
+
+  await admin
+    .from("guide_bases")
+    .update({ canonical_guide_id: canonicalGuide.id })
+    .eq("id", base.id)
+    .throwOnError();
+
+  const revision = await createGuideRevision(targetGuide.id, { title });
+  const reviewCase = await createReviewCase(userId, {
+    case_type: caseType,
+    status,
+  });
+  const panel = await createReviewPanel(reviewCase.id, {
+    target_seat_count: 1,
+  });
+  await createPanelMember(panel.id, userId);
+  await createGuideReviewCase(reviewCase.id, revision.id);
+  return { reviewCase, base, canonicalGuide, targetGuide, revision };
 }
 
 type SubmissionBody = {
@@ -240,6 +286,113 @@ describe("GET /reviews/cases/{id}", () => {
     expect(body.prerequisites.map((p) => p.slug)).toEqual([prereqSlug]);
     expect(body.todos.map((t) => t.title)).toEqual([todoTitle]);
     expect(body.revision?.tags.map((t) => t.id)).toContain(proposed);
+  });
+});
+
+describe("is_variant labeling", () => {
+  describe("GET /reviews/queue", () => {
+    it.each([
+      { caseType: "guide_publish" as const, isVariant: false },
+      { caseType: "guide_publish" as const, isVariant: true },
+      { caseType: "guide_edit" as const, isVariant: false },
+      { caseType: "guide_edit" as const, isVariant: true },
+    ])(
+      "reports is_variant=$isVariant for $caseType",
+      async ({ caseType, isVariant }) => {
+        const { token, userId } = await makeUser();
+        const { reviewCase } = await seedQueueCaseWithVariant({
+          userId,
+          title: "Queue Variant Check",
+          caseType,
+          isVariant,
+        });
+
+        const res = await app.request("/reviews/queue", auth(token), env);
+
+        expect(res.status).toBe(200);
+        await expectToMatchSpec(res, "GET", "/reviews/queue");
+        const body = (await res.json()) as {
+          cases: Array<{ id: string; title: string; is_variant: boolean }>;
+        };
+        const mine = body.cases.find((c) => c.id === reviewCase.id);
+        expect(mine?.title).toBe("Queue Variant Check");
+        expect(mine?.is_variant).toBe(isVariant);
+      }
+    );
+
+    it("still resolves the title for a pending case authored by someone else", async () => {
+      const { userId: author } = await makeUser();
+      const { token: verifierToken, userId: verifierId } = await makeUser();
+      const { reviewCase } = await seedQueueCaseWithVariant({
+        userId: author,
+        title: "Someone Else's Pending Guide",
+        caseType: "guide_publish",
+        isVariant: false,
+      });
+
+      const { data: panelRow } = await admin
+        .from("review_panels")
+        .select("id")
+        .eq("case_id", reviewCase.id)
+        .single();
+      await createPanelMember(panelRow!.id, verifierId);
+
+      const res = await app.request("/reviews/queue", auth(verifierToken), env);
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        cases: Array<{ id: string; title: string | null }>;
+      };
+      const mine = body.cases.find((c) => c.id === reviewCase.id);
+      expect(mine?.title).toBe("Someone Else's Pending Guide");
+    });
+  });
+
+  describe("GET /reviews/cases/{id}", () => {
+    it.each([
+      { caseType: "guide_publish" as const, isVariant: false },
+      { caseType: "guide_publish" as const, isVariant: true },
+      { caseType: "guide_edit" as const, isVariant: false },
+      { caseType: "guide_edit" as const, isVariant: true },
+    ])(
+      "reports revision.is_variant=$isVariant for $caseType",
+      async ({ caseType, isVariant }) => {
+        const { token, userId } = await makeUser();
+        const { reviewCase } = await seedQueueCaseWithVariant({
+          userId,
+          title: "Detail Variant Check",
+          caseType,
+          isVariant,
+        });
+
+        const res = await app.request(
+          `/reviews/cases/${reviewCase.id}`,
+          auth(token),
+          env
+        );
+
+        expect(res.status).toBe(200);
+        await expectToMatchSpec(res, "GET", "/reviews/cases/{id}");
+        const body = (await res.json()) as {
+          revision: { is_variant: boolean } | null;
+        };
+        expect(body.revision?.is_variant).toBe(isVariant);
+      }
+    );
+
+    it("cannot create a second guide under an official base", async () => {
+      const base = await createGuideBase({
+        is_official: true,
+        status: "published",
+      });
+      await createGuide(base.id); // canonical guide, fine
+
+      await expect(createGuide(base.id)).rejects.toMatchObject({
+        message: expect.stringContaining(
+          "Official guides do not take variants"
+        ),
+      });
+    });
   });
 });
 
