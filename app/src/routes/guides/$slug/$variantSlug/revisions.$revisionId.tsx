@@ -139,6 +139,7 @@ function RouteComponent() {
       tags: variant.tags,
       prerequisites: [],
       disclaimers: detail.disclaimers,
+      todo_prerequisites: [],
     };
 
     return (

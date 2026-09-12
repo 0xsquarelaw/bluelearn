@@ -78,6 +78,7 @@ function RouteComponent() {
     tags: variant.tags,
     prerequisites: [],
     disclaimers: variant.disclaimers,
+    todo_prerequisites: [],
   };
 
   const guideMenuItems = [
@@ -194,10 +195,10 @@ function RouteComponent() {
                     : null
                 }
                 onSubmit={async (reason, note) => {
-                  if (await downvote(reason, note)) setDownvoteOpen(false);
+                  await downvote(reason, note, () => setDownvoteOpen(false));
                 }}
                 onRemove={async () => {
-                  if (await removeVote()) setDownvoteOpen(false);
+                  await removeVote(() => setDownvoteOpen(false));
                 }}
               />
 

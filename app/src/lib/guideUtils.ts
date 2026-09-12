@@ -138,3 +138,23 @@ export const getHeadingId = (text: string, seen: Map<string, number>) => {
   seen.set(base, count + 1);
   return count === 0 ? base : `${base}-${count + 1}`;
 };
+
+// helper function for metadata SEO
+export function buildGuideMeta(guide: {
+  title: string;
+  summary?: string | null;
+  body?: string | null;
+  tags?: Array<{ name: string }>;
+}) {
+  const title = `${guide.title} | Bluelearn`; // <title> format to {guide.title} | Bluelearn
+  const description =
+    guide.summary || (guide.body ? guide.body.slice(0, 150) : "") || ""; // fallback: first 150 characters of content
+  const keywords = (guide.tags ?? []).map((t) => t.name).join(", ");
+  return [
+    { title },
+    { name: "description", content: description },
+    ...(keywords ? [{ name: "keywords", content: keywords }] : []),
+    { property: "og:title", content: title },
+    { property: "og:description", content: description },
+  ];
+}

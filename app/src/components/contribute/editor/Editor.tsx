@@ -4,6 +4,7 @@ import {
   NestedLexicalEditor,
   codeBlockPlugin,
   codeMirrorPlugin,
+  diffSourcePlugin,
   directivesPlugin,
   headingsPlugin,
   imagePlugin,
@@ -156,6 +157,7 @@ export default function Editor({
       }),
       directivesPlugin({ directiveDescriptors: [CalloutDirectiveDescriptor] }),
       mathPlugin(),
+      diffSourcePlugin({ viewMode: "rich-text" }),
       toolbarPlugin({
         toolbarContents: () => (
           <EditorToolbar
