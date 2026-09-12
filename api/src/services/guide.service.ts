@@ -359,13 +359,14 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
 
   const canonical = guide.canonical;
   const current = canonical?.current ?? null;
-  const [subjects, prerequisites, todoPrerequisites, follow_ups, disclaimers] = await Promise.all([
-    loadCanonicalTags(supabase, current?.id ?? null),
-    loadPrerequisites(supabase, guide.id),
-    loadTodoPrerequisites(supabase, guide.id),
-    loadFollowUps(supabase, guide.id),
-    loadDisclaimers(supabase, guide.id),
-  ]);
+  const [subjects, prerequisites, todoPrerequisites, follow_ups, disclaimers] =
+    await Promise.all([
+      loadCanonicalTags(supabase, current?.id ?? null),
+      loadPrerequisites(supabase, guide.id),
+      loadTodoPrerequisites(supabase, guide.id),
+      loadFollowUps(supabase, guide.id),
+      loadDisclaimers(supabase, guide.id),
+    ]);
   const authorId = canonical?.author_id ?? null;
   const usernames = await loadUsernames(supabase, [authorId]);
 
