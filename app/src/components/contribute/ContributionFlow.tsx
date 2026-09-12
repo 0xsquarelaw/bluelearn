@@ -774,6 +774,83 @@ function Inner({
 
     return () => controller.abort();
   }, []);
+  
+  // Shape the in-progress form as a Guide, so the submit step can render it with
+  // the same component the published page uses.
+  const previewGuide: ReaderGuide = useMemo(() => {
+    const nameById = new Map(
+      subjectOptions.map((s) => [s.id, s.name] as const)
+    );
+    const titleBySlug = new Map(
+      guideOptions
+        .filter((g) => g.slug)
+        .map((g) => [g.slug as string, g.title ?? (g.slug as string)] as const)
+    );
+
+    return {
+      slug: "",
+      variant_id: null,
+      variant_slug: null,
+      title: activeGuide.title || "Untitled guide",
+      author: username ?? "You",
+      summary: activeGuide.summary,
+      body: activeGuide.body,
+      duration_minutes: estimateReadMinutes(guideContData.body),
+      created_at: formatDate(new Date()),
+      tags: [
+        ...activeGuide.subjects.map((id) => ({
+          slug: id,
+          name: nameById.get(id) ?? id,
+        })),
+        ...activeGuide.newSubjects.map((s) => ({
+          slug: s.name,
+          name: s.name,
+        })),
+      ],
+      prerequisites: activeGuide.prereqs.map((slug) => ({
+        slug,
+        title: titleBySlug.get(slug) ?? slug,
+      })),
+      disclaimers: activeGuide.disclaimers,
+      todo_prerequisites: [],
+    };
+  }, [guideContData, subjectOptions, guideOptions, username]);
+
+  const previewVariant: ReaderGuide = useMemo(() => {
+    const nameById = new Map(
+      subjectOptions.map((s) => [s.id, s.name] as const)
+    );
+
+    return {
+      slug: "",
+      variant_id: null,
+      variant_slug: null,
+      title: variantContData.title || "Untitled guide",
+      author: username ?? "You",
+      summary: variantContData.summary,
+      body: variantContData.body,
+      created_at: formatDate(new Date()),
+      duration_minutes: estimateReadMinutes(variantContData.body),
+      tags: [
+        ...variantContData.subjects.map((id) => ({
+          slug: id,
+          name: nameById.get(id) ?? id,
+        })),
+        ...variantContData.newSubjects.map((s) => ({
+          slug: s.name,
+          name: s.name,
+        })),
+      ],
+      prerequisites: [],
+      disclaimers: [],
+      todo_prerequisites: [],
+    };
+  }, [variantContData, subjectOptions, username]);
+
+  const guideType: GuideType | undefined =
+    guideContData.type === "practical" || guideContData.type === "theoretical"
+      ? guideContData.type
+      : undefined;
 
   // server draft payload
   const draftFields = () => {

@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 
 import { buildBreadcrumbs } from "@/lib/breadcrumbs";
 import { getGuide } from "@/lib/api/guides";
+import { buildGuideMeta } from "@/lib/guideUtils";
 
 import "katex/dist/katex.min.css";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
@@ -46,6 +47,9 @@ export const Route = createFileRoute("/guides/$slug/")({
       throw notFound();
     }
   },
+  head: ({ loaderData }) => ({
+    meta: loaderData ? buildGuideMeta(loaderData) : [], // Metadata
+  }),
   component: RouteComponent,
 });
 
@@ -185,10 +189,10 @@ function RouteComponent() {
                     : null
                 }
                 onSubmit={async (reason, note) => {
-                  if (await downvote(reason, note)) setDownvoteOpen(false);
+                  await downvote(reason, note, () => setDownvoteOpen(false));
                 }}
                 onRemove={async () => {
-                  if (await removeVote()) setDownvoteOpen(false);
+                  await removeVote(() => setDownvoteOpen(false));
                 }}
               />
 
@@ -199,6 +203,7 @@ function RouteComponent() {
                 guideTitle={guide.title}
                 menuItems={guideMenuItems}
                 prerequisites={guide.prerequisites}
+                todoPrerequisites={guide.todo_prerequisites}
                 isOfficial={guide.is_official}
               />
 

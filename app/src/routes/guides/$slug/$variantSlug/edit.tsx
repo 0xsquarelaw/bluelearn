@@ -225,6 +225,7 @@ function RouteComponent() {
         title: titleBySlug.get(slug) ?? slug,
       })),
       disclaimers: guideContData.disclaimers,
+      todo_prerequisites: [],
     };
   }, [
     guideContData,

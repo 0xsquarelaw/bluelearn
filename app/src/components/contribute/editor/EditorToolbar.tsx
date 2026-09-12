@@ -14,6 +14,7 @@ import {
   convertSelectionToNode$,
   currentBlockType$,
   insertDirective$,
+  viewMode$,
 } from "@mdxeditor/editor";
 import { useCellValue, usePublisher } from "@mdxeditor/gurx";
 import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text";
@@ -37,6 +38,7 @@ import {
   MoreHorizontal,
   Plus,
   Quote,
+  SquareDashedText,
   Table,
   Type,
   Upload,
@@ -254,6 +256,14 @@ export default function EditorToolbar({
   const inlineMathRef = useRef<HTMLSpanElement>(null);
   const blockMathRef = useRef<HTMLSpanElement>(null);
   const insertDirective = usePublisher(insertDirective$);
+
+  // Source / Rich-text mode toggle (diffSourcePlugin)
+  const viewMode = useCellValue(viewMode$);
+  const setViewMode = usePublisher(viewMode$);
+  const isSourceMode = viewMode === "source";
+  const toggleSourceMode = () => {
+    setViewMode(isSourceMode ? "rich-text" : "source");
+  };
 
   const [isFullScreen, setIsFullScreen] = useState(false);
   const toggleFullScreen = () => {
@@ -620,6 +630,32 @@ export default function EditorToolbar({
             </Tooltip>
 
             <div className="mx-1 h-4 w-px bg-border" />
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={toggleSourceMode}
+                  aria-pressed={isSourceMode}
+                  aria-label={
+                    isSourceMode
+                      ? "Switch to Rich Text Mode"
+                      : "Switch to Source Mode"
+                  }
+                  className={
+                    isSourceMode ? "bg-accent text-accent-foreground" : ""
+                  }
+                >
+                  {isSourceMode ? <SquareDashedText /> : <Code />}
+                </button>
+              </TooltipTrigger>
+
+              <TooltipContent>
+                {isSourceMode ? "Rich Text Mode" : "Source Mode (Markdown)"}
+              </TooltipContent>
+            </Tooltip>
+
+            <div className="mx-1 h-4 w-px bg-border" />
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -698,6 +734,25 @@ export default function EditorToolbar({
                 >
                   <Upload className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>Import .md</span>
+                </button>
+
+                <div className="my-1 h-px bg-border" />
+
+                <button
+                  type="button"
+                  className={`toolbar-popover-item ${
+                    isSourceMode
+                      ? "bg-accent font-semibold text-accent-foreground"
+                      : ""
+                  }`}
+                  onClick={toggleSourceMode}
+                >
+                  {isSourceMode ? (
+                    <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                  ) : (
+                    <Code className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                  <span>{isSourceMode ? "Rich Text Mode" : "Source Mode"}</span>
                 </button>
 
                 <div className="my-1 h-px bg-border" />
