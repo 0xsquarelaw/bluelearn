@@ -7,6 +7,7 @@ import type {
   GuideReference,
   Pagination,
   SubjectReference,
+  TodoPrerequisiteReference,
   Walkthrough,
 } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
@@ -314,6 +315,31 @@ export async function loadFollowUps(
     .sort((a, b) => a.title.localeCompare(b.title));
 }
 
+// Requested prerequisites that haven't been resolved yet.
+async function loadTodoPrerequisites(
+  supabase: DB,
+  baseId: string
+): Promise<TodoPrerequisiteReference[]> {
+  const { data, error } = await supabase
+    .from("todo_prerequisites")
+    .select("id, title, summary")
+    .eq("dependent_guide_base_id", baseId)
+    .eq("status", "open");
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load todo prerequisites", 500);
+  }
+
+  return (data ?? [])
+    .map((todo) => ({
+      id: todo.id,
+      title: todo.title,
+      summary: todo.summary,
+    }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
+
 export async function getGuideBySlug(supabase: DB, rawSlug: string) {
   const slug = rawSlug.toLowerCase();
 
@@ -333,9 +359,10 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
 
   const canonical = guide.canonical;
   const current = canonical?.current ?? null;
-  const [subjects, prerequisites, follow_ups, disclaimers] = await Promise.all([
+  const [subjects, prerequisites, todoPrerequisites, follow_ups, disclaimers] = await Promise.all([
     loadCanonicalTags(supabase, current?.id ?? null),
     loadPrerequisites(supabase, guide.id),
+    loadTodoPrerequisites(supabase, guide.id),
     loadFollowUps(supabase, guide.id),
     loadDisclaimers(supabase, guide.id),
   ]);
@@ -356,6 +383,7 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
     tags: subjects.map((s) => ({ slug: s.slug, name: s.name })),
     prerequisites,
     follow_ups,
+    todo_prerequisites: todoPrerequisites,
     is_official: guide.is_official,
     disclaimers,
   };

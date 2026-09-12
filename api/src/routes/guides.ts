@@ -623,7 +623,7 @@ export const guideRevisionsRouter = new Hono<HonoEnv>()
       security: [{ bearerAuth: [] }],
       responses: {
         201: jsonContent(reviewCaseIdResponseSchema, "Review case opened"),
-        ...errorResponses(400, 401, 404, 422, 429),
+        ...errorResponses(400, 401, 404, 409, 422, 429),
       },
     }),
     requireUser,
