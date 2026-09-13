@@ -13,10 +13,7 @@ import {
   revisionStatusSchema,
   voteDirectionSchema,
 } from "./enums";
-import {
-  guideReferenceSchema,
-  todoPrerequisiteReferenceSchema,
-} from "./references";
+import { guideReferenceSchema, requestReferenceSchema } from "./references";
 export const guideSchema = z.object({
   slug: z.string(),
   variant_id: z.string().nullable(),
@@ -30,7 +27,7 @@ export const guideSchema = z.object({
   created_at: z.iso.datetime({ offset: true }),
   tags: z.array(subjectReferenceSchema),
   prerequisites: z.array(guideReferenceSchema),
-  todo_prerequisites: z.array(todoPrerequisiteReferenceSchema),
+  requests: z.array(requestReferenceSchema),
   is_official: z.boolean(),
   disclaimers: z.array(disclaimerSchema),
 });

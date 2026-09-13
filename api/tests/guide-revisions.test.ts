@@ -243,7 +243,7 @@ describe("PATCH /guide-revisions/{id}", () => {
     expect(edges?.map((e) => e.from_guide_base_id)).toEqual([prereq.id]);
 
     const { data: todos } = await admin
-      .from("todo_prerequisites")
+      .from("requests")
       .select("title")
       .eq("dependent_guide_base_id", base.id);
     expect(todos?.map((t) => t.title)).toEqual(["Learn functions"]);
@@ -351,7 +351,7 @@ describe("PATCH /guide-revisions/{id}", () => {
     expect(res.status).toBe(422);
 
     const { data: todos } = await admin
-      .from("todo_prerequisites")
+      .from("requests")
       .select("title")
       .eq("dependent_guide_base_id", base.id);
     expect(todos?.map((t) => t.title)).toEqual(["Learn vectors"]);

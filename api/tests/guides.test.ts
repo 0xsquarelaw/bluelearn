@@ -132,7 +132,7 @@ describe("POST /guides", () => {
     expect(edges?.map((e) => e.from_guide_base_id)).toEqual([prereq.id]);
 
     const { data: todos } = await admin
-      .from("todo_prerequisites")
+      .from("requests")
       .select("title")
       .eq("dependent_guide_base_id", baseId);
     expect(todos?.map((t) => t.title)).toEqual(["Learn limits"]);
@@ -153,12 +153,12 @@ describe("GET /guides/{slug}", () => {
       slug: string;
       body: string | null;
       tags: Array<{ slug: string }>;
-      todo_prerequisites: unknown[];
+      requests: unknown[];
     };
     expect(body.slug).toBe(base.slug);
     expect(body.body).toBe("Content");
     expect(body.tags.map((t) => t.slug)).toContain(subject.slug);
-    expect(body.todo_prerequisites).toEqual([]);
+    expect(body.requests).toEqual([]);
   });
 
   it("returns sorted open todos for this guide and omits resolved ones", async () => {
@@ -179,10 +179,10 @@ describe("GET /guides/{slug}", () => {
     expect(res.status).toBe(200);
     await expectToMatchSpec(res, "GET", "/guides/{slug}");
     const body = (await res.json()) as {
-      todo_prerequisites: Array<{ id: string; title: string; summary: string }>;
+      requests: Array<{ id: string; title: string; summary: string }>;
       prerequisites: Array<{ slug: string; title: string }>;
     };
-    expect(body.todo_prerequisites).toEqual([
+    expect(body.requests).toEqual([
       {
         id: earlier.id,
         title: "Learn algebra",

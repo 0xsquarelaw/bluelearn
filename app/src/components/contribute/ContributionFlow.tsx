@@ -554,7 +554,7 @@ function Inner({
         title: titleBySlug.get(slug) ?? slug,
       })),
       disclaimers: guideContData.disclaimers,
-      todo_prerequisites: [],
+      requests: [],
     };
   }, [guideContData, subjectOptions, guideOptions, username]);
 
@@ -585,7 +585,7 @@ function Inner({
       ],
       prerequisites: [],
       disclaimers: [],
-      todo_prerequisites: [],
+      requests: [],
     };
   }, [variantContData, subjectOptions, username]);
 

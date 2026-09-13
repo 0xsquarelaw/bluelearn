@@ -7,7 +7,7 @@ import type {
   GuideReference,
   Pagination,
   SubjectReference,
-  TodoPrerequisiteReference,
+  RequestReference,
   Walkthrough,
 } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
@@ -210,8 +210,8 @@ export async function createGuide(
     tags,
     prerequisites,
     newSubjects,
-    todoPrereqs,
-    todoClaims,
+    requests,
+    requestClaims,
     disclaimers,
   } = input;
 
@@ -231,7 +231,7 @@ export async function createGuide(
     tags,
     prerequisites,
     newSubjects,
-    todoPrereqs,
+    requests,
   });
 
   if (disclaimers.length > 0) {
@@ -239,9 +239,9 @@ export async function createGuide(
     await replaceDisclaimers(supabase, base.id, disclaimers);
   }
 
-  if (todoClaims.length > 0) {
+  if (requestClaims.length > 0) {
     const base = await resolveRevisionBase(supabase, revision_id);
-    await claimTodos(supabase, base.id, todoClaims);
+    await claimTodos(supabase, base.id, requestClaims);
   }
 
   return { revision_id };
@@ -282,12 +282,12 @@ async function loadPrerequisites(
 }
 
 // Requested prerequisites that haven't been resolved yet.
-async function loadTodoPrerequisites(
+async function loadRequests(
   supabase: DB,
   baseId: string
-): Promise<TodoPrerequisiteReference[]> {
+): Promise<RequestReference[]> {
   const { data, error } = await supabase
-    .from("todo_prerequisites")
+    .from("requests")
     .select("id, title, summary")
     .eq("dependent_guide_base_id", baseId)
     .eq("status", "open");
@@ -325,13 +325,12 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
 
   const canonical = guide.canonical;
   const current = canonical?.current ?? null;
-  const [subjects, prerequisites, todoPrerequisites, disclaimers] =
-    await Promise.all([
-      loadCanonicalTags(supabase, current?.id ?? null),
-      loadPrerequisites(supabase, guide.id),
-      loadTodoPrerequisites(supabase, guide.id),
-      loadDisclaimers(supabase, guide.id),
-    ]);
+  const [subjects, prerequisites, requests, disclaimers] = await Promise.all([
+    loadCanonicalTags(supabase, current?.id ?? null),
+    loadPrerequisites(supabase, guide.id),
+    loadRequests(supabase, guide.id),
+    loadDisclaimers(supabase, guide.id),
+  ]);
   const authorId = canonical?.author_id ?? null;
   const usernames = await loadUsernames(supabase, [authorId]);
 
@@ -348,7 +347,7 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
     created_at: guide.created_at,
     tags: subjects.map((s) => ({ slug: s.slug, name: s.name })),
     prerequisites,
-    todo_prerequisites: todoPrerequisites,
+    requests: requests,
     is_official: guide.is_official,
     disclaimers,
   };
