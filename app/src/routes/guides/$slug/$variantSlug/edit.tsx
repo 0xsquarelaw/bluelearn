@@ -83,7 +83,7 @@ function RouteComponent() {
       summary: s.summary ?? "",
     })),
     prereqs: snapshot.prerequisites,
-    todoPrereqs: snapshot.todos,
+    requests: snapshot.todos,
     disclaimers: snapshot.disclaimers,
   }));
 
