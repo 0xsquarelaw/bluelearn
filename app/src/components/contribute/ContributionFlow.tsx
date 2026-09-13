@@ -13,6 +13,7 @@ import type {
 } from "@/types/contributions";
 
 import type { LocalRevision } from "@/lib/api/guideRevisions";
+import type { ReaderGuide } from "@/components/GuideReader";
 import { MobileStepProgress } from "@/components/contribute/MobileStepProgress";
 
 import { SelectType } from "@/components/contribute/steps/SelectType";
@@ -804,7 +805,7 @@ function Inner({
       author: username ?? "You",
       summary: activeGuide.summary,
       body: activeGuide.body,
-      duration_minutes: estimateReadMinutes(guideContData.body),
+      duration_minutes: estimateReadMinutes(activeGuide.body),
       created_at: formatDate(new Date()),
       tags: [
         ...activeGuide.subjects.map((id) => ({
@@ -855,11 +856,6 @@ function Inner({
       todo_prerequisites: [],
     };
   }, [variantContData, subjectOptions, username]);
-
-  const guideType: GuideType | undefined =
-    guideContData.type === "practical" || guideContData.type === "theoretical"
-      ? guideContData.type
-      : undefined;
 
   // server draft payload
   const draftFields = () => {
