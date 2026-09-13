@@ -763,6 +763,8 @@ function Inner({
     Awaited<ReturnType<typeof listGuides>>
   >([]);
 
+  const [username, setUsername] = useState<string | null>(null);
+
   useEffect(() => {
     const controller = new AbortController();
     const opts = { signal: controller.signal };
@@ -773,6 +775,10 @@ function Inner({
 
     listGuides(opts)
       .then(setGuideOptions)
+      .catch(() => {});
+
+    getMyIdentity(opts)
+      .then((data) => setUsername(data.profile.username))
       .catch(() => {});
 
     return () => controller.abort();
