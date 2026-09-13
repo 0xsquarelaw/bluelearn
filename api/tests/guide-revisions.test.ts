@@ -443,7 +443,7 @@ describe("POST /guide-revisions/{id}/submit", () => {
     );
     const todo = await createTodo(baseA.id);
     await admin
-      .from("todo_claims")
+      .from("request_claims")
       .insert({ todo_id: todo.id, guide_base_id: baseA.id })
       .throwOnError();
     const first = await app.request(
@@ -458,7 +458,7 @@ describe("POST /guide-revisions/{id}/submit", () => {
       authorB.userId
     );
     await admin
-      .from("todo_claims")
+      .from("request_claims")
       .insert({ todo_id: todo.id, guide_base_id: baseB.id })
       .throwOnError();
     const res = await app.request(
@@ -475,11 +475,11 @@ describe("POST /guide-revisions/{id}/submit", () => {
     const { revision, base } = await createCompleteDraft(author.userId);
     const todo = await createTodo(base.id);
     await admin
-      .from("todo_claims")
+      .from("request_claims")
       .insert({ todo_id: todo.id, guide_base_id: base.id })
       .throwOnError();
     await admin
-      .from("todo_prerequisites")
+      .from("requests")
       .update({ status: "resolved", resolved_guide_base_id: base.id })
       .eq("id", todo.id)
       .throwOnError();
@@ -499,7 +499,7 @@ describe("POST /guide-revisions/{id}/submit", () => {
     );
     const todo = await createTodo(baseA.id);
     await admin
-      .from("todo_claims")
+      .from("request_claims")
       .insert({ todo_id: todo.id, guide_base_id: baseA.id })
       .throwOnError();
     const first = await app.request(
@@ -522,7 +522,7 @@ describe("POST /guide-revisions/{id}/submit", () => {
       authorB.userId
     );
     await admin
-      .from("todo_claims")
+      .from("request_claims")
       .insert({ todo_id: todo.id, guide_base_id: baseB.id })
       .throwOnError();
     const res = await app.request(

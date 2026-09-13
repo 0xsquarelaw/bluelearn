@@ -480,7 +480,7 @@ async function assertNoCompetingTodoClaim(supabase: DB, revisionId: string) {
   const baseId = rev.guides.guide_base_id;
 
   const { data: claims, error: claimsError } = await supabase
-    .from("todo_claims")
+    .from("request_claims")
     .select("todo_id")
     .eq("guide_base_id", baseId);
   if (claimsError) throw new ServiceError("Unable to submit revision", 400);
@@ -488,7 +488,7 @@ async function assertNoCompetingTodoClaim(supabase: DB, revisionId: string) {
   if (todoIds.length === 0) return;
 
   const { data: todos, error: todosError } = await supabase
-    .from("todo_prerequisites")
+    .from("requests")
     .select("status")
     .in("id", todoIds);
   if (todosError) throw new ServiceError("Unable to submit revision", 400);

@@ -25,7 +25,7 @@ import { loadDisclaimers, replaceDisclaimers } from "./disclaimer.service";
 type DB = SupabaseClient<Database>;
 
 // Names the exact published_guides columns that PUBLISHED_GUIDE_SELECT fetches.
-type GuideCardRow = Pick
+type GuideCardRow = Pick<
   Database["public"]["Views"]["published_guides"]["Row"],
   | "id"
   | "base_slug"
