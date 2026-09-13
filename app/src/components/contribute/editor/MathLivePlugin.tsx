@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import "katex/dist/katex.min.css";
 import katex from "katex";
@@ -86,7 +92,12 @@ export const OPEN_MATH_EDITOR_COMMAND = createCommand<MathEditorPayload | null>(
 
 function isMobileDevice(): boolean {
   if (typeof window === "undefined") return false;
-  return window.innerWidth < 768;
+  const hasCoarsePointer =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(pointer: coarse)").matches;
+  const hasTouchPoints =
+    typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
+  return hasCoarsePointer || hasTouchPoints || window.innerWidth < 768;
 }
 
 export function SingletonMathEditor() {
@@ -192,24 +203,21 @@ export function SingletonMathEditor() {
     );
   }, [editor, closeEditor]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!payload) return;
     const mf = mfRef.current;
     if (!mf) return;
     mf.value = payload.latex;
     mf.mathVirtualKeyboardPolicy = isMobile ? "auto" : "manual";
-    const frame = requestAnimationFrame(() => {
-      mfRef.current?.focus();
-      const mvk = (window as any).mathVirtualKeyboard;
-      if (mvk) {
-        if (isMobile && typeof mvk.show === "function") {
-          mvk.show();
-        } else if (!isMobile && typeof mvk.hide === "function") {
-          mvk.hide();
-        }
+    mf.focus();
+    const mvk = (window as any).mathVirtualKeyboard;
+    if (mvk) {
+      if (isMobile && typeof mvk.show === "function") {
+        mvk.show();
+      } else if (!isMobile && typeof mvk.hide === "function") {
+        mvk.hide();
       }
-    });
-    return () => cancelAnimationFrame(frame);
+    }
   }, [payload, isMobile]);
 
   useEffect(() => {
