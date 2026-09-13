@@ -74,7 +74,7 @@ const createGuideContData = (): GuideContribution => ({
   subjects: [],
   newSubjects: [],
   prereqs: [],
-  todoPrereqs: [],
+  requests: [],
   disclaimers: [],
 });
 
@@ -444,7 +444,7 @@ function Inner({
             subjects: tagged,
             newSubjects: pending,
             prereqs: data.prerequisites,
-            todoPrereqs: data.todos,
+            requests: data.todos,
             disclaimers: data.disclaimers,
           };
           setGuideContData(gData);
@@ -604,7 +604,7 @@ function Inner({
     ],
     prerequisites: guideContData.prereqs,
     newSubjects: unsavedSubjects(guideContData.newSubjects),
-    todoPrereqs: guideContData.todoPrereqs,
+    requests: guideContData.requests,
     disclaimers: guideContData.disclaimers,
   });
 
@@ -726,7 +726,7 @@ function Inner({
                   ? "practical"
                   : "theoretical",
               ...draftFields(),
-              todoClaims: todoIds,
+              requestClaims: todoIds,
               disclaimers: guideContData.disclaimers,
             })
           : addGuideVariant(variantContData.baseGuide, variantDraftFields())

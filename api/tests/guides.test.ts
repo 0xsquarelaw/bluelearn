@@ -90,7 +90,7 @@ describe("POST /guides", () => {
         body: "Body.",
         newSubjects: [{ name: newName, summary: "About it" }],
         prerequisites: [prereq.slug],
-        todoPrereqs: ["Learn limits"],
+        requests: [{ title: "Learn limits", summary: "About limits" }],
       }),
       env
     );

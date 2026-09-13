@@ -54,7 +54,7 @@ describe("contributionStorage", () => {
       subjects: ["sub-1"],
       newSubjects: [],
       prereqs: [],
-      todoPrereqs: [],
+      requests: [],
       disclaimers: [],
     };
 
@@ -132,7 +132,7 @@ describe("contributionStorage", () => {
       subjects: [],
       newSubjects: [],
       prereqs: [],
-      todoPrereqs: [],
+      requests: [],
       disclaimers: [],
     };
 

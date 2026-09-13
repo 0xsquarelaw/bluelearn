@@ -221,7 +221,7 @@ describe("PATCH /guide-revisions/{id}", () => {
         tags: [existing.id],
         prerequisites: [prereq.slug],
         newSubjects: [{ name: newName }],
-        todoPrereqs: ["Learn functions"],
+        requests: [{ title: "Learn functions", summary: "About functions" }],
       }),
       env
     );
@@ -344,7 +344,9 @@ describe("PATCH /guide-revisions/{id}", () => {
 
     const res = await app.request(
       `/guide-revisions/${draft.id}`,
-      jsonAuth(author.token, "PATCH", { todoPrereqs: ["Learn matrices"] }),
+      jsonAuth(author.token, "PATCH", {
+        requests: [{ title: "Learn matrices", summary: "About matrices" }],
+      }),
       env
     );
 
