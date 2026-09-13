@@ -88,6 +88,14 @@ export const PreviewGuide = ({
           title: slug,
         })),
 
+        todo_prerequisites: activeGuide.todoPrereqs.map((slug) => {
+          return {
+            title: slug.title,
+            summary: slug.summary,
+            id: "asdf", // TODO: get ID
+          };
+        }),
+
         tags: activeGuide.subjects.map((id) => {
           const subject = subjects.filter((sub) => sub.id === id);
 
