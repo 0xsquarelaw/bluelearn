@@ -1345,11 +1345,11 @@ export type Database = {
         Args: { p_revision_id: string }
         Returns: string
       }
+      sweep_expired_review_seats: { Args: never; Returns: Json }
       todo_has_open_claim: {
-        Args: { p_todo_ids: string[]; p_exclude_base_id: string }
+        Args: { p_exclude_base_id?: string; p_todo_ids: string[] }
         Returns: boolean
       }
-      sweep_expired_review_seats: { Args: never; Returns: Json }
       wilson_lower_bound: {
         Args: { downvotes: number; upvotes: number; z?: number }
         Returns: number
