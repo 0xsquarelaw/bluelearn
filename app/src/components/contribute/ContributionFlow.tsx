@@ -486,20 +486,16 @@ function Inner({
 
   const [autosaveReady, setAutosaveReady] = useState(!draftId && !editSlug);
 
+  const {
+    revisionId: removedRevisionId,
+    localDraftId,
+    ...savedGuide
+  } = activeGuide;
+
   const guideSave = useDebouncedContributionSave(
     autosaveReady && type === "guide" ? activeGuide.localDraftId : null,
     autosaveReady && type === "guide" ? "guide" : null,
-    {
-      type: activeGuide.type,
-      title: activeGuide.title,
-      summary: activeGuide.summary,
-      body: activeGuide.body,
-      subjects: activeGuide.subjects,
-      newSubjects: activeGuide.newSubjects,
-      prereqs: activeGuide.prereqs,
-      todoPrereqs: activeGuide.todoPrereqs,
-      disclaimers: activeGuide.disclaimers,
-    },
+    savedGuide,
     activeGuide.revisionId,
     step
   );
@@ -1069,17 +1065,7 @@ function Inner({
       if (type === "guide") {
         storeContributionDraft(
           "guide",
-          {
-            type: activeGuide.type,
-            title: activeGuide.title,
-            summary: activeGuide.summary,
-            body: activeGuide.body,
-            subjects: activeGuide.subjects,
-            newSubjects: activeGuide.newSubjects,
-            prereqs: activeGuide.prereqs,
-            todoPrereqs: activeGuide.todoPrereqs,
-            disclaimers: activeGuide.disclaimers,
-          },
+          savedGuide,
           activeGuide.localDraftId,
           id,
           step
