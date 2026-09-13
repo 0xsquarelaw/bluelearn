@@ -1,5 +1,4 @@
 import type { InferRequestType } from "hono/client";
-import type { UUID } from "node:crypto";
 import { client } from "@/lib/api/apiClient";
 import { assertOk } from "@/lib/api/apiHelpers";
 
@@ -35,37 +34,6 @@ export type RemoteRevision = {
     summary: string;
   }>;
   revised_from_case_id: string | null;
-  disclaimers: Array<
-    "medical" | "financial" | "legal" | "mature" | "profanity"
-  >;
-};
-
-export type LocalRevision = {
-  localDraftId: UUID;
-  type: "variant" | "guide" | "";
-  data: {
-    type: "theoretical" | "practical" | "";
-    title: string;
-    summary: string;
-    baseGuide: string;
-    body: string;
-    subjects: Array<{
-      id: string;
-      slug: string | null;
-      name: string;
-      summary: string | null;
-      status: "draft" | "published";
-    }>;
-    newSubjects: Array<string>;
-    prereqs: Array<string>;
-    todoPrereqs: Array<{
-      title: string;
-      summary: string;
-    }>;
-  };
-  revisionId: string;
-  step: string;
-  updatedAt: number;
   disclaimers: Array<
     "medical" | "financial" | "legal" | "mature" | "profanity"
   >;

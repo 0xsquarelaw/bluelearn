@@ -11,7 +11,7 @@ import {
 /**
  * all locally stored contribution drafts exist under one localStorage key
  */
-const STORAGE_KEY = "bluelearn:contrib:drafts";
+export const STORAGE_KEY = "bluelearn:contrib:drafts";
 
 /**
  * localDraftId - identifies the draft inside this browser

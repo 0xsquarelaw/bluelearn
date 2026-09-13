@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
-import type { LocalRevision, RemoteRevision } from "@/lib/api/guideRevisions";
+import type { RemoteRevision } from "@/lib/api/guideRevisions";
+import type { GuideContribution } from "@/types/contributions";
+import type { PersistedContributionDraft } from "@/lib/contributionStorage";
 import {
   Dialog,
   DialogClose,
@@ -17,6 +19,7 @@ import { getGuideDrafts } from "@/lib/api/identity";
 import {
   createLocalDraftId,
   getStoredDraftsByType,
+  setStoredDraft,
 } from "@/lib/contributionStorage";
 import { Button } from "@/components/ui/button";
 import { getRevision } from "@/lib/api/guideRevisions";
@@ -104,27 +107,34 @@ export const SelectDraftModal = ({
     return selected;
   };
 
-  const toLocalDraft = (remote: RemoteRevision): LocalRevision => {
-    // Convert remote drafts to local draft format
-    const getCurrentUnixTime = () => Math.floor(Date.now() / 1000);
+  const toLocalDraft = (
+    remote: RemoteRevision
+  ): PersistedContributionDraft<GuideContribution> => {
+    const tagged = remote.subjects
+      .filter((s) => s.status === "published")
+      .map((s) => s.id);
+
+    const pending = remote.subjects
+      .filter((s) => s.status !== "published")
+      .map((s) => ({ id: s.id, name: s.name, summary: s.summary ?? "" }));
+
     return {
       localDraftId: createLocalDraftId(),
       type: "guide",
       data: {
-        type: remote.knowledge_type ?? "",
+        type: remote.knowledge_type ?? "theoretical",
         title: remote.revision.title ?? "",
         summary: remote.revision.summary ?? "",
         body: remote.revision.body ?? "",
-        baseGuide: remote.revision.guide_id,
-        subjects: remote.subjects,
-        newSubjects: [],
+        subjects: tagged,
+        newSubjects: pending,
         prereqs: remote.prerequisites,
         todoPrereqs: remote.todos,
+        disclaimers: remote.disclaimers,
       },
-      disclaimers: remote.disclaimers,
       revisionId: remote.revision.id,
-      step: "",
-      updatedAt: getCurrentUnixTime(),
+      step: "guide-info",
+      updatedAt: Date.now(),
     };
   };
 
@@ -135,17 +145,11 @@ export const SelectDraftModal = ({
     const remoteDrafts: Array<RemoteRevision> =
       await fetchSelectedDrafts(selectedDrafts);
 
-    const converted: Array<LocalRevision> = remoteDrafts.map(toLocalDraft);
+    const converted = remoteDrafts.map(toLocalDraft);
 
-    // Append to localStorage
-    const draftData = localStorage.getItem("bluelearn:contrib:drafts") ?? "{}";
-    const draftJson = JSON.parse(draftData);
-
-    for (const element of converted) {
-      draftJson[element.localDraftId] = element;
+    for (const draft of converted) {
+      setStoredDraft(draft);
     }
-
-    localStorage.setItem("bluelearn:contrib:drafts", JSON.stringify(draftJson));
 
     window.dispatchEvent(new Event("existingDraftsAdded"));
 

@@ -7,12 +7,10 @@ import type { Dispatch, SetStateAction } from "react";
 import type {
   ContributionType,
   GuideContribution,
-  GuideType,
   ObjectiveContribution,
   VariantContribution,
 } from "@/types/contributions";
 
-import type { LocalRevision } from "@/lib/api/guideRevisions";
 import type { ReaderGuide } from "@/components/GuideReader";
 import { MobileStepProgress } from "@/components/contribute/MobileStepProgress";
 
@@ -205,42 +203,20 @@ export default function ContributionFlow({
 
   useEffect(() => {
     function handleUpdate() {
-      const toMultiGuide = (revision: LocalRevision): MultiGuide => {
-        return {
-          type: revision.data.type === "" ? "theoretical" : revision.data.type,
-          title: revision.data.title,
-          summary: revision.data.summary,
-          body: revision.data.body,
-          subjects: revision.data.subjects.map((s) => s.id),
-          newSubjects: revision.data.newSubjects.map((name) => ({
-            name,
-            summary: "",
-          })),
-          prereqs: revision.data.prereqs,
-          todoPrereqs: revision.data.todoPrereqs,
-          localDraftId: revision.localDraftId,
-          revisionId: revision.revisionId,
-          disclaimers: revision.disclaimers,
-        };
-      };
-      const updated: Record<string, LocalRevision> = JSON.parse(
-        localStorage.getItem("bluelearn:contrib:drafts") || "{}"
-      );
+      const storedGuides = getStoredDraftsByType("guide");
 
-      const isEmpty = JSON.stringify(updated) === "{}";
-      if (isEmpty) {
+      if (storedGuides.length === 0) {
         setGuideContData([createMultiGuide()]);
         return;
       }
 
-      const convertedGuides: Array<MultiGuide> = [];
-      for (const revision of Object.values(updated)) {
-        if (revision.type === "variant") continue;
-
-        const converted = toMultiGuide(revision);
-        convertedGuides.push(converted);
-        setGuideContData(convertedGuides);
-      }
+      setGuideContData(
+        storedGuides.map((draft) => ({
+          localDraftId: draft.localDraftId,
+          revisionId: draft.revisionId,
+          ...draft.data,
+        }))
+      );
     }
 
     window.addEventListener("existingDraftsAdded", handleUpdate);
