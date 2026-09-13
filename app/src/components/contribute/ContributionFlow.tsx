@@ -7,6 +7,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type {
   ContributionType,
   GuideContribution,
+  GuideType,
   ObjectiveContribution,
   VariantContribution,
 } from "@/types/contributions";
@@ -49,6 +50,8 @@ import {
   setStoredDraft,
   useDebouncedContributionSave,
 } from "@/lib/contributionStorage";
+import { estimateReadMinutes, formatDate } from "@/lib/guideUtils";
+import { getMyIdentity } from "@/lib/api/identity";
 
 const MAX_WORD_COUNT = 2500;
 
@@ -774,7 +777,7 @@ function Inner({
 
     return () => controller.abort();
   }, []);
-  
+
   // Shape the in-progress form as a Guide, so the submit step can render it with
   // the same component the published page uses.
   const previewGuide: ReaderGuide = useMemo(() => {
