@@ -28,6 +28,7 @@ export const guideSchema = z.object({
   tags: z.array(subjectReferenceSchema),
   prerequisites: z.array(guideReferenceSchema),
   requests: z.array(requestReferenceSchema),
+  follow_ups: z.array(guideReferenceSchema).optional(),
   is_official: z.boolean(),
   disclaimers: z.array(disclaimerSchema),
 });

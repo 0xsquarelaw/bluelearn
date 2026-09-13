@@ -115,6 +115,7 @@ function RouteComponent() {
           guide={guide}
           slug={slug}
           showPrerequisites={false}
+          showFollowUps={false}
         />
 
         {/* MAIN */}

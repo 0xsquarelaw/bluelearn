@@ -25,7 +25,7 @@ import { loadDisclaimers, replaceDisclaimers } from "./disclaimer.service";
 type DB = SupabaseClient<Database>;
 
 // Names the exact published_guides columns that PUBLISHED_GUIDE_SELECT fetches.
-type GuideCardRow = Pick<
+type GuideCardRow = Pick
   Database["public"]["Views"]["published_guides"]["Row"],
   | "id"
   | "base_slug"
@@ -281,6 +281,40 @@ async function loadPrerequisites(
     .sort((a, b) => a.title.localeCompare(b.title));
 }
 
+// A base's direct follow-ups
+export async function loadFollowUps(
+  supabase: DB,
+  baseId: string
+): Promise<GuideReference[]> {
+  const { data, error } = await supabase
+    .from("guide_edges")
+    .select(
+      `to:guide_bases!to_guide_base_id(
+        slug,
+        canonical:guides!guide_bases_canonical_guide_id_fkey(
+          current:guide_revisions!guides_current_revision_id_fkey(title)
+        )
+      )`
+    )
+    .eq("from_guide_base_id", baseId)
+    .eq("edge_type", "prerequisite")
+    .eq("is_suspended", false);
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load follow-ups.", 500);
+  }
+
+  return (data ?? [])
+    .map((edge) => edge.to)
+    .filter((base) => base != null)
+    .map((base) => ({
+      slug: base.slug ?? "",
+      title: base.canonical?.current?.title ?? base.slug ?? "",
+    }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
+
 // Requested prerequisites that haven't been resolved yet.
 async function loadRequests(
   supabase: DB,
@@ -325,12 +359,15 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
 
   const canonical = guide.canonical;
   const current = canonical?.current ?? null;
-  const [subjects, prerequisites, requests, disclaimers] = await Promise.all([
-    loadCanonicalTags(supabase, current?.id ?? null),
-    loadPrerequisites(supabase, guide.id),
-    loadRequests(supabase, guide.id),
-    loadDisclaimers(supabase, guide.id),
-  ]);
+
+  const [subjects, prerequisites, requests, follow_ups, disclaimers] =
+    await Promise.all([
+      loadCanonicalTags(supabase, current?.id ?? null),
+      loadPrerequisites(supabase, guide.id),
+      loadRequests(supabase, guide.id),
+      loadFollowUps(supabase, guide.id),
+      loadDisclaimers(supabase, guide.id),
+    ]);
   const authorId = canonical?.author_id ?? null;
   const usernames = await loadUsernames(supabase, [authorId]);
 
@@ -347,7 +384,8 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
     created_at: guide.created_at,
     tags: subjects.map((s) => ({ slug: s.slug, name: s.name })),
     prerequisites,
-    requests: requests,
+    requests,
+    follow_ups,
     is_official: guide.is_official,
     disclaimers,
   };

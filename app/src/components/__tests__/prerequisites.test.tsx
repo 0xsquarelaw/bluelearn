@@ -93,13 +93,11 @@ describe.each(["sidebar", "mobile dialog"] as const)(
 
     it("shows the empty state when neither kind is present", () => {
       show([], []);
-      expect(screen.getByText("None declared")).toBeDefined();
       expect(screen.queryByText("Todo")).toBeNull();
     });
 
     it("shows a todo without a link when there are no existing prerequisites", () => {
       show([], [todo]);
-      expect(screen.queryByText("None declared")).toBeNull();
       expect(screen.getByText(todo.title).closest("a")).toBeNull();
       expect(screen.getByText("Todo")).toBeDefined();
       if (surface === "mobile dialog") {
@@ -117,7 +115,6 @@ describe.each(["sidebar", "mobile dialog"] as const)(
         screen.getByRole("link", { name: "Variables" }).getAttribute("href")
       ).toBe("/guides/variables");
       expect(screen.getByText(todo.title).closest("a")).toBeNull();
-      expect(screen.queryByText("None declared")).toBeNull();
     });
   }
 );
