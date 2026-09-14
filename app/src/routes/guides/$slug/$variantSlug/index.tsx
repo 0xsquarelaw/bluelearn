@@ -212,7 +212,7 @@ function RouteComponent() {
                 isOfficial={variant.is_official}
               />
 
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
