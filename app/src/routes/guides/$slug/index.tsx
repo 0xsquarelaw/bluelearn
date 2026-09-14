@@ -207,7 +207,7 @@ function RouteComponent() {
                 isOfficial={guide.is_official}
               />
 
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
