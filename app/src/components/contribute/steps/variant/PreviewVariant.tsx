@@ -64,6 +64,7 @@ export const PreviewVariant = ({
 
     // variants don't have prerequisites
     prerequisites: [],
+    todo_prerequisites: [],
 
     tags: guide.subjects.map((id: string) => {
       const subject = subjects.filter((sub) => sub.id === id);
