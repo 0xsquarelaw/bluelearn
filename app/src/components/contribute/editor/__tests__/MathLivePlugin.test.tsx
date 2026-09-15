@@ -29,13 +29,17 @@ vi.mock("@lexical/react/LexicalComposerContext", () => ({
   useLexicalComposerContext: () => [editorMocks.editor],
 }));
 
+const originalMathVirtualKeyboard = window.mathVirtualKeyboard;
+
 describe("SingletonMathEditor", () => {
   afterEach(() => {
     cleanup();
     document.body.replaceChildren();
     editorMocks.state.openEditor = undefined;
-    delete (window as Window & { mathVirtualKeyboard?: unknown })
-      .mathVirtualKeyboard;
+    Object.defineProperty(window, "mathVirtualKeyboard", {
+      configurable: true,
+      value: originalMathVirtualKeyboard,
+    });
     vi.restoreAllMocks();
   });
 
