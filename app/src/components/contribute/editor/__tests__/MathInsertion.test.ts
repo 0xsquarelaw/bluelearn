@@ -4,8 +4,12 @@ import { describe, expect, it } from "vitest";
 import {
   $insertBlockMathInQuote,
   $replaceTextWithBlockMathInQuote,
-} from "../MathInsertion";
-import { $createMathNode, $isMathNode, MathNode } from "../MathNode";
+} from "@/components/contribute/editor/MathInsertion";
+import {
+  $createMathNode,
+  $isMathNode,
+  MathNode,
+} from "@/components/contribute/editor/MathNode";
 
 function createTestEditor() {
   return createEditor({
