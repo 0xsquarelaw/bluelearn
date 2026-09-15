@@ -56,6 +56,7 @@ vi.mock("@/lib/api/objectiveRevisions", () => ({
   submitObjectiveRevision: vi.fn(),
   updateObjectiveRevision: vi.fn(),
 }));
+vi.mock("@/lib/supabase", () => ({ supabase: {} }));
 
 vi.mock("@/components/contribute/steps/guide/GuideInfo", () => ({
   GuideInfo: () => null,
