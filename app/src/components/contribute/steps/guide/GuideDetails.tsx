@@ -100,35 +100,35 @@ export const GuideDetails = ({
   return (
     <div>
       <FieldGroup>
+        {onChangeSummaryChange && (
+          <Field className="space-y-2">
+            <div className="space-y-1">
+              <FieldLabel
+                required
+                className="font-mono text-[14px] tracking-[0.08em] uppercase"
+              >
+                Change Summary
+              </FieldLabel>
+
+              <FieldDescription className="text-xs">
+                Briefly describe what this revision changes.
+              </FieldDescription>
+            </div>
+
+            <textarea
+              className="h-24 w-full min-w-0 resize-none rounded-md border border-input bg-input/20 p-2 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20 md:text-xs/relaxed dark:bg-input/30"
+              rows={3}
+              maxLength={500}
+              placeholder="Describe what changed."
+              value={changeSummary ?? ""}
+              onChange={(e) => onChangeSummaryChange(e.target.value)}
+            />
+          </Field>
+        )}
+
         {showBaseFields && (
           <>
             <div className="space-y-1">
-              {onChangeSummaryChange && (
-                <Field className="space-y-2">
-                  <div className="space-y-1">
-                    <FieldLabel
-                      required
-                      className="font-mono text-[14px] tracking-[0.08em] uppercase"
-                    >
-                      Change Summary
-                    </FieldLabel>
-
-                    <FieldDescription className="text-xs">
-                      Briefly describe what this revision changes.
-                    </FieldDescription>
-                  </div>
-
-                  <textarea
-                    className="h-24 w-full min-w-0 resize-none rounded-md border border-input bg-input/20 p-2 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20 md:text-xs/relaxed dark:bg-input/30"
-                    rows={3}
-                    maxLength={500}
-                    placeholder="Describe what changed."
-                    value={changeSummary ?? ""}
-                    onChange={(e) => onChangeSummaryChange(e.target.value)}
-                  />
-                </Field>
-              )}
-
               <FieldLabel
                 required
                 className="font-mono text-[14px] tracking-[0.08em] uppercase"
