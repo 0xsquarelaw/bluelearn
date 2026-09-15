@@ -105,7 +105,7 @@ export const EditGuideInfo = ({
         submitting={submitting}
       />
 
-      <div className="min-w-0 flex-1">
+      <div className="min-h-[calc(100vh-65px)] min-w-0 flex-1 pt-4">
         <CustomTabs tabs={tabs} />
       </div>
     </Stepper.Content>

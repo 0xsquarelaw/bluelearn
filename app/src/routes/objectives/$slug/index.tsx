@@ -16,6 +16,7 @@ import { buildObjectiveFlow } from "@/lib/objectiveSnapshot";
 import { getObjective } from "@/lib/api/objectives";
 import { getMyIdentity } from "@/lib/api/identity";
 import { listGuides } from "@/lib/api/guides";
+import { buildPageMeta } from "@/lib/seo";
 
 import ObjectiveFlow from "@/components/objective/ObjectiveFlow";
 import { ObjectiveActions } from "@/components/objective/ObjectiveActions";
@@ -29,6 +30,18 @@ export const Route = createFileRoute("/objectives/$slug/")({
       getMyIdentity({ signal: abortController.signal }).catch(() => null),
     ]);
     return { ...objective, guides, identity };
+  },
+  head: ({ loaderData }) => {
+    if (!loaderData) return { meta: [] };
+
+    const title = loaderData.objective.title?.trim() || "Untitled objective";
+    return {
+      meta: buildPageMeta(
+        title,
+        loaderData.objective.summary?.trim() ||
+          `Follow the ${title} learning objective on Bluelearn with step-by-step guides and prerequisites.`
+      ),
+    };
   },
   pendingComponent: ObjectivePending,
   errorComponent: ObjectiveError,

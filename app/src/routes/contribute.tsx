@@ -5,6 +5,7 @@ import ContributionFlow from "@/components/contribute/ContributionFlow";
 import { requireSession } from "@/lib/auth";
 import { RejectionFeedback } from "@/components/review/RejectionFeedback";
 import { ErrorFallback } from "@/components/ErrorFallback";
+import { buildPageMeta } from "@/lib/seo";
 
 export type ContributeSearch = {
   draft?: string;
@@ -19,6 +20,15 @@ export type ContributeSearch = {
 };
 
 export const Route = createFileRoute("/contribute")({
+  head: () => ({
+    // The form is client-only and can redirect to login before it loads.
+    meta: import.meta.env.SSR
+      ? []
+      : buildPageMeta(
+          "Contribute",
+          "Share what you know on Bluelearn. Write a guide, offer a different explanation, or create a learning objective."
+        ),
+  }),
   ssr: false,
   beforeLoad: requireSession,
   validateSearch: (search: Record<string, unknown>): ContributeSearch => {
