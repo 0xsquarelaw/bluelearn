@@ -817,6 +817,7 @@ function Inner({
       todoClaims: todoIds,
     });
 
+    // store the server revisionId on this guide only
     setGuideContData((prev) =>
       prev.map((g) =>
         g.localDraftId === guide.localDraftId
@@ -828,7 +829,7 @@ function Inner({
     return newRevisionId;
   };
 
-  // server persistence
+  // server persistence - guide revisionId lives on the active guide itself
   const persistDraft = async () => {
     if (type === "objective") {
       const target_ids = objectiveContData.targets.map(baseIdForSlug);
@@ -896,6 +897,7 @@ function Inner({
     }
 
     if (type === "guide") {
+      // active guide owns its own server revisionId.
       return persistGuide(activeGuide);
     }
 
