@@ -749,19 +749,16 @@ function Inner({
   }, []);
 
   // server draft payload
-  const draftFields = () => {
+  const draftFields = (guide: MultiGuide) => {
     return {
-      title: activeGuide.title || null,
-      summary: activeGuide.summary || null,
-      body: activeGuide.body || null,
-      tags: [
-        ...activeGuide.subjects,
-        ...existingTagIds(activeGuide.newSubjects),
-      ],
-      prerequisites: activeGuide.prereqs,
-      newSubjects: unsavedSubjects(activeGuide.newSubjects),
-      todoPrereqs: activeGuide.todoPrereqs,
-      disclaimers: activeGuide.disclaimers,
+      title: guide.title || null,
+      summary: guide.summary || null,
+      body: guide.body || null,
+      tags: [...guide.subjects, ...existingTagIds(guide.newSubjects)],
+      prerequisites: guide.prereqs,
+      newSubjects: unsavedSubjects(guide.newSubjects),
+      todoPrereqs: guide.todoPrereqs,
+      disclaimers: guide.disclaimers,
     };
   };
 
@@ -806,7 +803,32 @@ function Inner({
   // prevent two simultaneous create requests
   const creatingRef = useRef<Promise<string> | null>(null);
 
-  // server persistence - guide revisionId lives on the active guide itself
+  // for batch submit, each guide gets its own revisionId
+  const persistGuide = async (guide: MultiGuide) => {
+    if (guide.revisionId) {
+      await updateRevision(guide.revisionId, draftFields(guide));
+
+      return guide.revisionId;
+    }
+
+    const newRevisionId = await createGuide({
+      knowledge_type: guide.type === "practical" ? "practical" : "theoretical",
+      ...draftFields(guide),
+      todoClaims: todoIds,
+    });
+
+    setGuideContData((prev) =>
+      prev.map((g) =>
+        g.localDraftId === guide.localDraftId
+          ? { ...g, revisionId: newRevisionId }
+          : g
+      )
+    );
+
+    return newRevisionId;
+  };
+
+  // server persistence
   const persistDraft = async () => {
     if (type === "objective") {
       const target_ids = objectiveContData.targets.map(baseIdForSlug);
@@ -873,32 +895,8 @@ function Inner({
       return creatingRef.current;
     }
 
-    // Guide/Variant
     if (type === "guide") {
-      // active guide owns its own server revisionId.
-      if (activeGuide.revisionId) {
-        await updateRevision(activeGuide.revisionId, draftFields());
-
-        return activeGuide.revisionId;
-      }
-
-      const newRevisionId = await createGuide({
-        knowledge_type:
-          activeGuide.type === "practical" ? "practical" : "theoretical",
-        ...draftFields(),
-        todoClaims: todoIds,
-      });
-
-      // store the server revision ID on THIS guide only
-      setGuideContData((prev) =>
-        prev.map((guide) =>
-          guide.localDraftId === activeGuide.localDraftId
-            ? { ...guide, revisionId: newRevisionId }
-            : guide
-        )
-      );
-
-      return newRevisionId;
+      return persistGuide(activeGuide);
     }
 
     // variant
@@ -1061,23 +1059,93 @@ function Inner({
     ? new Set(missingObjectiveFields().map((m) => m.field))
     : undefined;
 
+  const wordLimitMessage = (guide: MultiGuide) => {
+    const text = guide.body.trim();
+    const wordCount = text ? text.split(/\s+/).length : 0;
+
+    if (wordCount <= MAX_WORD_COUNT) {
+      return null;
+    }
+
+    return `Your guide currently has ${wordCount.toLocaleString()} words. Please reduce it to ${MAX_WORD_COUNT.toLocaleString()} words or fewer.`;
+  };
+
+  type SubmitOutcome = { ok: true } | { ok: false; reason: string };
+
+  // per-guide outcome without interrupting batch
+  const submitGuide = async (guide: MultiGuide): Promise<SubmitOutcome> => {
+    const overLimit = wordLimitMessage(guide);
+
+    if (overLimit) {
+      return { ok: false, reason: overLimit };
+    }
+
+    try {
+      const id = await persistGuide(guide);
+      await submitRevision(id);
+
+      return { ok: true };
+    } catch (e) {
+      return {
+        ok: false,
+        reason: e instanceof Error ? e.message : "Could not submit",
+      };
+    }
+  };
+
+  // batch send; errors/refusals stay draft, others get sent
+  const submitAllGuides = async () => {
+    const submitted = new Set<string>();
+
+    for (const guide of guideContData) {
+      const label = guide.title.trim() || "Untitled guide";
+      const outcome = await submitGuide(guide);
+
+      if (outcome.ok) {
+        submitted.add(guide.localDraftId);
+        toast.success(`Submitted for review: ${label}`);
+        continue;
+      }
+
+      toast.error(`Could not submit: ${label}`, {
+        description: outcome.reason,
+      });
+    }
+
+    guideSave.cancel();
+    submitted.forEach(clearStoredDraft);
+    setRevisionId(null);
+
+    const remaining = guideContData.filter(
+      (guide) => !submitted.has(guide.localDraftId)
+    );
+
+    if (remaining.length > 0) {
+      // persistGuide may have stored new revisionIds meanwhile; filter the
+      // latest state rather than the snapshot this loop walked.
+      setGuideContData((prev) =>
+        prev.filter((guide) => !submitted.has(guide.localDraftId))
+      );
+      setActiveGuideId(remaining[0].localDraftId);
+
+      return;
+    }
+
+    const newGuide = createMultiGuide();
+    setGuideContData([newGuide]);
+    setActiveGuideId(newGuide.localDraftId);
+    onPublished?.();
+  };
+
   // publish
   const publish = async () => {
     setSubmitting(true);
 
     try {
       if (type === "guide") {
-        const text = activeGuide.body.trim();
+        await submitAllGuides();
 
-        const wordCount = text ? text.split(/\s+/).length : 0;
-
-        if (wordCount > MAX_WORD_COUNT) {
-          toast.error("Word count limit exceeded", {
-            description: `Your guide currently has ${wordCount.toLocaleString()} words. Please reduce it to ${MAX_WORD_COUNT.toLocaleString()} words or fewer.`,
-          });
-
-          return;
-        }
+        return;
       }
 
       if (type === "objective") {
@@ -1113,46 +1181,6 @@ function Inner({
         onPublished?.();
 
         toast.success("Objective published");
-
-        return;
-      }
-
-      if (type === "guide") {
-        await submitRevision(id);
-
-        guideSave.cancel();
-
-        /**
-         * only delete the ACTIVE guide's local draft
-         * other guides in the multi-guide UI remain untouched
-         * TODO: publish all guides on button click - not just active draft
-         */
-        clearStoredDraft(activeGuide.localDraftId);
-
-        // remove only the published guide from the current multi-guide session
-        setGuideContData((prev) =>
-          prev.filter(
-            (guide) => guide.localDraftId !== activeGuide.localDraftId
-          )
-        );
-
-        // Select another guide if one exists.
-        const remaining = guideContData.filter(
-          (guide) => guide.localDraftId !== activeGuide.localDraftId
-        );
-
-        if (remaining.length > 0) {
-          setActiveGuideId(remaining[0].localDraftId);
-        } else {
-          const newGuide = createMultiGuide();
-          setGuideContData([newGuide]);
-          setActiveGuideId(newGuide.localDraftId);
-        }
-
-        setRevisionId(null);
-        onPublished?.();
-
-        toast.success("Submitted for review");
 
         return;
       }
