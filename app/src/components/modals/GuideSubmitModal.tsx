@@ -37,7 +37,7 @@ export const GuideSubmitModal = ({
   const title = batch
     ? `Submit all ${guideCount} guides?`
     : "Are you sure you want to submit?";
-  const confirmLabel = batch ? `Submit ${guideCount} guides` : "Submit";
+  const confirmLabel = batch ? `Submit All` : "Submit";
 
   const handleSubmit = () => {
     if (onPublish && acceptGuidelines) {
