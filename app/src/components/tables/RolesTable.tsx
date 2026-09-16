@@ -1,3 +1,4 @@
+import { userRoleSchema, userStatusSchema } from "@bluelearn/schemas";
 import { Checkbox } from "../ui/checkbox";
 import type { DashboardRoleRow } from "@/lib/api/dashboard";
 import type { DashboardColumn } from "@/lib/dashboardFilters";
@@ -26,6 +27,7 @@ const columns: Array<DashboardColumn<DashboardRoleRow[number]>> = [
     key: "roles",
     label: "Roles",
     kind: "choice",
+    options: [...userRoleSchema.options, "No roles"],
     value: (row) => (row.roles.length ? row.roles : ["No roles"]),
   },
   {
@@ -44,6 +46,7 @@ const columns: Array<DashboardColumn<DashboardRoleRow[number]>> = [
     key: "status",
     label: "Status",
     kind: "choice",
+    options: [...userStatusSchema.options, "No status"],
     value: (row) => row.status ?? "No status",
   },
 ];
@@ -104,7 +107,6 @@ export const RolesTable = ({
             >
               <ColumnFilter
                 column={column}
-                rows={roleData}
                 filters={filters}
                 onChange={updateFilters}
               />
@@ -120,7 +122,7 @@ export const RolesTable = ({
               colSpan={6}
               className="px-4 py-3 text-center text-muted-foreground"
             >
-              No matching users.
+              No data matches these filters
             </TableCell>
           </TableRow>
         )}

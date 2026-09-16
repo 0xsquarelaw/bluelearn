@@ -1,121 +1,101 @@
-import { Filter } from "lucide-react";
-import type { DashboardColumn, DashboardFilters } from "@/lib/dashboardFilters";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  ChoiceColumnFilter,
+  DateColumnFilter,
+  ColumnFilter as FilterPopover,
+  SortRow,
+} from "./ActivityColumnFilters";
+import type { DashboardColumn, DashboardFilters } from "@/lib/dashboardFilters";
+import { filterText } from "@/lib/dashboardFilters";
+import { Input } from "@/components/ui/input";
 
 export function ColumnFilter<T>({
   column,
-  rows,
   filters,
   onChange,
 }: {
   column: DashboardColumn<T>;
-  rows: Array<T>;
   filters: DashboardFilters;
   onChange: (changes: DashboardFilters) => void;
 }) {
   const { key, label, kind } = column;
-  const value = filters[key] ?? "";
-  const from = filters[`${key}.from`] ?? "";
-  const to = filters[`${key}.to`] ?? "";
-  const active = kind === "date" ? Boolean(from || to) : Boolean(value.trim());
-  const choices =
-    kind === "choice"
-      ? [
-          ...new Set(
-            rows.flatMap((row) => {
-              const cell = column.value(row);
-              return Array.isArray(cell) ? cell : [cell ?? ""];
-            })
-          ),
-        ]
-          .filter(Boolean)
-          .sort()
-      : [];
+  const direction =
+    filters.sortBy === key ? filterText(filters.sortDirection) : "";
+  const sort = direction === "asc" || direction === "desc" ? direction : null;
+  const clearSort =
+    filters.sortBy === key
+      ? { sortBy: undefined, sortDirection: undefined }
+      : {};
+  const setSort = (next: "asc" | "desc" | null) =>
+    onChange(next ? { sortBy: key, sortDirection: next } : clearSort);
 
+  if (kind === "date") {
+    return (
+      <DateColumnFilter
+        label={label}
+        search={{
+          from: filterText(filters[`${key}.from`]) || undefined,
+          to: filterText(filters[`${key}.to`]) || undefined,
+        }}
+        setFilters={(next) =>
+          onChange({ [`${key}.from`]: next.from, [`${key}.to`]: next.to })
+        }
+        sortControl={{
+          direction: sort,
+          onChange: setSort,
+          onClear: () =>
+            onChange({
+              [`${key}.from`]: undefined,
+              [`${key}.to`]: undefined,
+              ...clearSort,
+            }),
+        }}
+      />
+    );
+  }
+  if (kind === "choice") {
+    const selected = filters[key];
+    return (
+      <ChoiceColumnFilter
+        label={label}
+        field="subject"
+        options={(column.options ?? []).map((value) => ({
+          value,
+          label: value,
+        }))}
+        search={{ subject: Array.isArray(selected) ? selected : [] }}
+        setFilters={(next) => onChange({ [key]: next.subject })}
+      />
+    );
+  }
+  const value = filterText(filters[key]);
   return (
-    <span className="inline-flex items-center gap-1">
-      {label}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant={active ? "secondary" : "ghost"}
-            size="icon-sm"
-            aria-label={`Filter ${label}${active ? " (active)" : ""}`}
-          >
-            <Filter aria-hidden="true" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="start" aria-label={`Filter ${label}`}>
-          {kind === "date" ? (
-            <>
-              <label className="flex flex-col gap-1">
-                From
-                <Input
-                  type="date"
-                  aria-label={`${label} from`}
-                  value={from}
-                  max={to || undefined}
-                  onChange={(event) =>
-                    onChange({ [`${key}.from`]: event.target.value })
-                  }
-                />
-              </label>
-              <label className="flex flex-col gap-1">
-                To
-                <Input
-                  type="date"
-                  aria-label={`${label} to`}
-                  value={to}
-                  min={from || undefined}
-                  onChange={(event) =>
-                    onChange({ [`${key}.to`]: event.target.value })
-                  }
-                />
-              </label>
-            </>
-          ) : kind === "choice" ? (
-            <div className="flex max-h-60 flex-col gap-2 overflow-y-auto">
-              {choices.map((choice) => (
-                <label key={choice} className="flex items-center gap-2">
-                  <Checkbox
-                    checked={value === choice}
-                    onCheckedChange={(checked) =>
-                      onChange({ [key]: checked ? choice : "" })
-                    }
-                  />
-                  {choice}
-                </label>
-              ))}
-            </div>
-          ) : (
-            <Input
-              type="search"
-              aria-label={`Search ${label}`}
-              placeholder={`Search ${label.toLowerCase()}…`}
-              value={value}
-              onChange={(event) => onChange({ [key]: event.target.value })}
-            />
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!active}
-            onClick={() =>
-              onChange({ [key]: "", [`${key}.from`]: "", [`${key}.to`]: "" })
-            }
-          >
-            Clear filter
-          </Button>
-        </PopoverContent>
-      </Popover>
-    </span>
+    <FilterPopover
+      label={label}
+      active={Boolean(value.trim()) || sort !== null}
+      onClear={() => onChange({ [key]: undefined, ...clearSort })}
+    >
+      <Input
+        type="search"
+        aria-label={`Search ${label}`}
+        value={value}
+        onChange={(event) => onChange({ [key]: event.target.value })}
+        placeholder={`Search ${label.toLowerCase()}...`}
+        className="h-7"
+      />
+      <div className="flex flex-col">
+        <SortRow
+          ascending
+          label="Sort A - Z"
+          active={sort === "asc"}
+          onClick={() => setSort(sort === "asc" ? null : "asc")}
+        />
+        <SortRow
+          ascending={false}
+          label="Sort Z - A"
+          active={sort === "desc"}
+          onClick={() => setSort(sort === "desc" ? null : "desc")}
+        />
+      </div>
+    </FilterPopover>
   );
 }

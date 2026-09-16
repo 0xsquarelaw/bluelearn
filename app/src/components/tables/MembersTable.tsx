@@ -1,3 +1,4 @@
+import { userStatusSchema } from "@bluelearn/schemas";
 import { Checkbox } from "../ui/checkbox";
 import type { MemberRow } from "@/lib/api/dashboard";
 import type { DashboardColumn } from "@/lib/dashboardFilters";
@@ -44,6 +45,7 @@ const columns: Array<DashboardColumn<MemberRow>> = [
     key: "status",
     label: "Status",
     kind: "choice",
+    options: [...userStatusSchema.options, "No Status"],
     value: (row) => row.status ?? "No Status",
   },
 ];
@@ -107,7 +109,6 @@ export const MembersTable = ({
             >
               <ColumnFilter
                 column={column}
-                rows={MemberData}
                 filters={filters}
                 onChange={updateFilters}
               />
@@ -123,7 +124,7 @@ export const MembersTable = ({
               colSpan={7}
               className="px-4 py-3 text-center text-muted-foreground"
             >
-              No matching members.
+              No data matches these filters
             </TableCell>
           </TableRow>
         )}

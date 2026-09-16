@@ -1,3 +1,8 @@
+import {
+  reviewCaseTypeSchema,
+  reviewSeatStatusSchema,
+  userStatusSchema,
+} from "@bluelearn/schemas";
 import { useEffect, useState } from "react";
 import { Checkbox } from "../ui/checkbox";
 import type { AssignmentTable } from "@/lib/api/dashboard";
@@ -36,6 +41,7 @@ const columns: Array<
     label: "Assignee Status",
     width: "w-xs",
     kind: "choice",
+    options: [...userStatusSchema.options, "No status."],
     value: (row) => row.user_status ?? "No status.",
   },
   {
@@ -50,6 +56,7 @@ const columns: Array<
     label: "Status",
     width: "w-xs",
     kind: "choice",
+    options: reviewSeatStatusSchema.options,
     value: (row) => row.status,
   },
   {
@@ -57,6 +64,7 @@ const columns: Array<
     label: "Type",
     width: "w-xs",
     kind: "choice",
+    options: reviewCaseTypeSchema.options,
     value: (row) => row.type,
   },
   { key: "title", label: "Title", width: "w-lg", value: (row) => row.title },
@@ -185,7 +193,6 @@ export const AssignmentsTable = ({
               >
                 <ColumnFilter
                   column={column}
-                  rows={assignmentsData}
                   filters={filters}
                   onChange={updateFilters}
                 />
@@ -201,7 +208,7 @@ export const AssignmentsTable = ({
                 colSpan={10}
                 className="px-4 py-3 text-center text-muted-foreground"
               >
-                No matching assignments.
+                No data matches these filters
               </TableCell>
             </TableRow>
           )}

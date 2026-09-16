@@ -50,7 +50,7 @@ const assignments: AssignmentTable = [
     change_summary: "Explain mass",
     status: "assigned",
     user_status: "active",
-    type: "guide",
+    type: "guide_publish",
     time_left: null,
     date_created: "2026-09-01T12:00:00",
     date_updated: "2026-09-15T12:00:00",
@@ -63,7 +63,7 @@ const assignments: AssignmentTable = [
     change_summary: "Add examples",
     status: "completed",
     user_status: "active",
-    type: "guide_revision",
+    type: "guide_edit",
     time_left: "2026-09-10T12:00:00",
     date_created: "2026-09-10T12:00:00",
     date_updated: "2026-09-15T12:00:00",
@@ -111,13 +111,16 @@ it("searches members case-insensitively and clears hidden bulk selections", () =
   render(<Dashboard table="members" />);
   fireEvent.click(screen.getByRole("checkbox", { name: "Select all users" }));
   expect(screen.getByLabelText("Selected rows").textContent).toBe("alice,bob");
-  const popup = openFilter("Display Name");
+  openFilter("Display Name");
   fireEvent.change(screen.getByRole("searchbox"), {
     target: { value: "  SMITH " },
   });
   expect(screen.getByLabelText("Selected rows").textContent).toBe("alice");
   expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
-  fireEvent.click(within(popup).getByRole("button", { name: "Clear filter" }));
+  closeFilter();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Clear Display Name filter" })
+  );
   expect(document.querySelectorAll("tbody tr")).toHaveLength(2);
   expect(screen.getByLabelText("Selected rows").textContent).toBe("alice");
 });
@@ -131,8 +134,9 @@ it("combines member text and status filters with an empty state", () => {
   closeFilter();
   const popup = openFilter("Status");
   fireEvent.click(within(popup).getByRole("checkbox", { name: "inactive" }));
-  expect(screen.getByText("No matching members.")).toBeDefined();
-  fireEvent.click(within(popup).getByRole("button", { name: "Clear filter" }));
+  expect(screen.getByText("No data matches these filters")).toBeDefined();
+  closeFilter();
+  fireEvent.click(screen.getByRole("button", { name: "Clear Status filter" }));
   expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
 });
 
@@ -146,16 +150,29 @@ it("searches the displayed username when display name is missing", () => {
 
 it("filters dates inclusively and clears both bounds", () => {
   render(<Dashboard table="members" />);
-  const popup = openFilter("Date Created");
-  fireEvent.change(screen.getByLabelText("Date Created from"), {
-    target: { value: "2026-09-10" },
-  });
-  fireEvent.change(screen.getByLabelText("Date Created to"), {
-    target: { value: "2026-09-10" },
-  });
+  openFilter("Date Created");
+  for (const bound of ["from", "to"]) {
+    fireEvent.click(
+      screen.getByRole("button", { name: `Date Created ${bound}` })
+    );
+    fireEvent.change(screen.getByPlaceholderText("MM"), {
+      target: { value: "09" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("DD"), {
+      target: { value: "10" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("YYYY"), {
+      target: { value: "2026" },
+    });
+    const dialogs = screen.getAllByRole("dialog");
+    fireEvent.keyDown(dialogs[dialogs.length - 1], { key: "Escape" });
+  }
   expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
   expect(document.querySelector("tbody")?.textContent).toContain("bob");
-  fireEvent.click(within(popup).getByRole("button", { name: "Clear filter" }));
+  closeFilter();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Clear Date Created filter" })
+  );
   expect(document.querySelectorAll("tbody tr")).toHaveLength(2);
 });
 
@@ -200,11 +217,11 @@ it("searches guide titles without conflating assignments for the same user", () 
 it("combines assignment type and status filters", () => {
   render(<Dashboard table="assignments" />);
   openFilter("Type");
-  fireEvent.click(screen.getByRole("checkbox", { name: "guide_revision" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "guide_edit" }));
   closeFilter();
   openFilter("Status");
   fireEvent.click(screen.getByRole("checkbox", { name: "assigned" }));
-  expect(screen.getByText("No matching assignments.")).toBeDefined();
+  expect(screen.getByText("No data matches these filters")).toBeDefined();
 });
 
 describe.each(["members", "roles", "assignments"] as const)(
@@ -218,9 +235,87 @@ describe.each(["members", "roles", "assignments"] as const)(
     });
     it("handles an empty dataset without selecting any rows", () => {
       render(<Dashboard table={table} empty />);
-      expect(screen.getByText(/^No matching/)).toBeDefined();
+      expect(screen.getByText("No data matches these filters")).toBeDefined();
       fireEvent.click(screen.getByRole("checkbox", { name: /^Select all/ }));
       expect(screen.getByLabelText("Selected rows").textContent).toBe("");
     });
+  }
+);
+
+it("sorts text in both directions and clears the active heading", () => {
+  render(<Dashboard table="members" />);
+  const popup = openFilter("Username");
+  fireEvent.click(within(popup).getByRole("button", { name: "Sort Z - A" }));
+  expect(document.querySelector("tbody tr")?.textContent).toContain("bob");
+  expect(
+    screen.getByRole("button", { name: "Filter Username" }).className
+  ).toContain("text-brand-bright-blue");
+  fireEvent.click(within(popup).getByRole("button", { name: "Sort A - Z" }));
+  expect(document.querySelector("tbody tr")?.textContent).toContain("alice");
+  closeFilter();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Clear Username filter" })
+  );
+  expect(
+    screen.queryByRole("button", { name: "Clear Username filter" })
+  ).toBeNull();
+});
+
+it("sorts dates in both directions and preserves another column's sort on clear", () => {
+  render(<Dashboard table="members" />);
+  openFilter("Username");
+  fireEvent.change(screen.getByRole("searchbox"), { target: { value: "o" } });
+  closeFilter();
+  const popup = openFilter("Date Created");
+  fireEvent.click(within(popup).getByRole("button", { name: "Sort Newest" }));
+  closeFilter();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Clear Username filter" })
+  );
+  expect(document.querySelector("tbody tr")?.textContent).toContain("bob");
+  openFilter("Date Created");
+  fireEvent.click(screen.getByRole("button", { name: "Sort Oldest" }));
+  expect(document.querySelector("tbody tr")?.textContent).toContain("alice");
+  closeFilter();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Clear Date Created filter" })
+  );
+  expect(
+    screen.queryByRole("button", { name: "Clear Date Created filter" })
+  ).toBeNull();
+});
+
+it("combines multiple choices within a column", () => {
+  render(<Dashboard table="members" />);
+  openFilter("Status");
+  fireEvent.click(screen.getByRole("checkbox", { name: "active" }));
+  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
+  fireEvent.click(screen.getByRole("checkbox", { name: "inactive" }));
+  expect(document.querySelectorAll("tbody tr")).toHaveLength(2);
+  fireEvent.click(screen.getByRole("checkbox", { name: "active" }));
+  expect(document.querySelector("tbody")?.textContent).toContain("bob");
+});
+
+it.each([
+  ["members", "Status", ["active", "inactive", "suspended"]],
+  [
+    "roles",
+    "Roles",
+    ["verifier", "moderator", "curator", "admin", "official", "No roles"],
+  ],
+  ["assignments", "Status", ["assigned", "recused", "replaced", "completed"]],
+  [
+    "assignments",
+    "Type",
+    ["guide_publish", "guide_edit", "official_publish", "official_edit"],
+  ],
+] as const)(
+  "shows all %s %s choices without loaded rows",
+  (table, label, options) => {
+    render(<Dashboard table={table} empty />);
+    const popup = openFilter(label);
+    for (const name of options) {
+      expect(within(popup).getByRole("checkbox", { name })).toBeDefined();
+    }
   }
 );
