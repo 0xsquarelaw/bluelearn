@@ -155,17 +155,13 @@ describe("ContributionFlow batch submit", () => {
     renderPreview();
 
     // desktop header and mobile bar both render a submit button
-    const buttons = screen.getAllByRole("button", { name: /2 guides/i });
+    const buttons = screen.getAllByRole("button", { name: /All/i });
     expect(buttons).toHaveLength(2);
     fireEvent.click(buttons[0]);
 
     const dialog = await screen.findByRole("dialog");
-    expect(
-      within(dialog).getByRole("heading", { name: /2 guides/i })
-    ).toBeTruthy();
-    expect(
-      within(dialog).getByRole("button", { name: /2 guides/i })
-    ).toBeTruthy();
+    expect(within(dialog).getByRole("heading", { name: /All/i })).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: /All/i })).toBeTruthy();
   });
 
   it("keeps the single-guide wording when one guide is in the workspace", async () => {
