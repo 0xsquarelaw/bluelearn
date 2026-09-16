@@ -48,7 +48,7 @@ const columns: Array<
     key: "time_left",
     label: "Time Left",
     width: "w-sm",
-    kind: "date",
+    kind: "duration",
     value: (row) => row.time_left,
   },
   {
