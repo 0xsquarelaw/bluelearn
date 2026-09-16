@@ -20,6 +20,7 @@ type PropTypes = {
   submitting?: boolean;
   saveDisabled?: boolean;
   publishLabel?: string;
+  guideCount?: number;
   onSaveDraft?: () => void | boolean | Promise<void | boolean>;
   onPublish?: () => void;
 };
@@ -32,6 +33,7 @@ export const StepperActionHeader = ({
   submitting,
   saveDisabled,
   publishLabel = "Submit for Review",
+  guideCount = 1,
   hideBackBtn,
   hideGuidelines,
   onSaveDraft,
@@ -48,6 +50,12 @@ export const StepperActionHeader = ({
   const toggleGuidelineModal = () => setOpenGuidelineModal(!openGuidelineModal);
   const toggleSubmitModal = () => setShowSubmitModal(!showSubmitModal);
   const handleSubmit = () => setShowSubmitModal(!showSubmitModal);
+
+  // batch submit feedback so it's more obvious for the user
+  const submitLabel =
+    guideCount > 1 ? `Submit ${guideCount} Guides for Review` : publishLabel;
+  const compactSubmitLabel =
+    guideCount > 1 ? `Submit ${guideCount} Guides` : "Submit";
 
   useEffect(() => {
     return () => {
@@ -114,7 +122,7 @@ export const StepperActionHeader = ({
               disabled={submitting}
               onClick={handleSubmit}
             >
-              {publishLabel}
+              {submitLabel}
             </button>
           ) : (
             <Stepper.Next className="btn-pri" disabled={nextDisabled}>
@@ -182,7 +190,7 @@ export const StepperActionHeader = ({
                 onClick={handleSubmit}
               >
                 {publishLabel.toLowerCase().startsWith("submit")
-                  ? "Submit"
+                  ? compactSubmitLabel
                   : publishLabel}
               </button>
             ) : (
@@ -215,6 +223,7 @@ export const StepperActionHeader = ({
           open={showSubmitModal}
           onOpenChange={toggleSubmitModal}
           submitting={submitting}
+          guideCount={guideCount}
           onPublish={onPublish}
         />
       )}

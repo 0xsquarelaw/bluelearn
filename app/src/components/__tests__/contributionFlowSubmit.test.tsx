@@ -121,13 +121,11 @@ const renderPreview = () => {
 };
 
 const submitAll = async () => {
-  fireEvent.click(
-    screen.getAllByRole("button", { name: /submit for review/i })[0]
-  );
+  fireEvent.click(screen.getAllByRole("button", { name: /^submit\b/i })[0]);
 
   const dialog = await screen.findByRole("dialog");
   fireEvent.click(within(dialog).getByRole("checkbox"));
-  fireEvent.click(within(dialog).getByRole("button", { name: "Submit" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: /^submit\b/i }));
 };
 
 describe("ContributionFlow batch submit", () => {
@@ -147,6 +145,44 @@ describe("ContributionFlow batch submit", () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it("names the batch size on the submit button and in the dialog", async () => {
+    storeGuides([
+      completeGuide("Batch label guide A"),
+      completeGuide("Batch label guide B"),
+    ]);
+    renderPreview();
+
+    // desktop header and mobile bar both render a submit button
+    const buttons = screen.getAllByRole("button", { name: /2 guides/i });
+    expect(buttons).toHaveLength(2);
+    fireEvent.click(buttons[0]);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByRole("heading", { name: /2 guides/i })
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByRole("button", { name: /2 guides/i })
+    ).toBeTruthy();
+  });
+
+  it("keeps the single-guide wording when one guide is in the workspace", async () => {
+    storeGuides([completeGuide("Single label guide")]);
+    renderPreview();
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /^submit for review$/i })[0]
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByRole("heading", { name: /submit/i }).textContent
+    ).not.toMatch(/\d/);
+    expect(
+      within(dialog).getByRole("button", { name: /^submit$/i })
+    ).toBeTruthy();
   });
 
   it("keeps a refused guide as a draft and sends the rest", async () => {
