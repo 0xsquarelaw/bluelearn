@@ -52,10 +52,8 @@ export const StepperActionHeader = ({
   const handleSubmit = () => setShowSubmitModal(!showSubmitModal);
 
   // batch submit feedback so it's more obvious for the user
-  const submitLabel =
-    guideCount > 1 ? `Submit ${guideCount} Guides for Review` : publishLabel;
-  const compactSubmitLabel =
-    guideCount > 1 ? `Submit ${guideCount} Guides` : "Submit";
+  const submitLabel = guideCount > 1 ? `Submit All for Review` : publishLabel;
+  const compactSubmitLabel = guideCount > 1 ? `Submit All` : "Submit";
 
   useEffect(() => {
     return () => {
@@ -67,7 +65,7 @@ export const StepperActionHeader = ({
     // get all drafts from localstorage
     const allDrafts = getAllStoredDrafts();
     setAllStoredDrafts(allDrafts);
-  }, [saved]); // TODO: should get drafts when a new draft is added to the workspace
+  }, [saved]);
 
   const saveDraft = async () => {
     if (!onSaveDraft) return;
