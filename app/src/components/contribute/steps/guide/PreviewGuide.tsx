@@ -113,6 +113,7 @@ export const PreviewGuide = ({
         title="Preview"
         Stepper={Stepper}
         type={type}
+        guideCount={guides.length}
         onSaveDraft={onSaveDraft}
         onPublish={onPublish}
         submitting={submitting}
