@@ -5,7 +5,10 @@ import type * as ReactType from "react";
 import type { Walkthrough } from "@bluelearn/schemas";
 import type { GraphNodeData } from "@/lib/useGraphLayout";
 import { GuideGraphNode } from "@/components/graph/GuideGraphNode";
-import { useGraphLayout } from "@/lib/useGraphLayout";
+import {
+  getTargetPrerequisiteWalkthrough,
+  useGraphLayout,
+} from "@/lib/useGraphLayout";
 
 vi.mock("@xyflow/react", async () => {
   const React = await vi.importActual<typeof ReactType>("react");
@@ -74,6 +77,29 @@ const walkthroughData: Walkthrough = {
 };
 
 describe("walkthrough graph direction", () => {
+  it("keeps objective curation on the target's prerequisite graph", () => {
+    const prerequisiteWalkthrough = getTargetPrerequisiteWalkthrough(
+      {
+        ...walkthroughData,
+        nodes: walkthroughData.nodes.map((node) =>
+          node.slug === "follow-up" ? { ...node, level: 1 } : node
+        ),
+      },
+      "target"
+    );
+
+    expect(prerequisiteWalkthrough.nodes.map((node) => node.slug)).toEqual([
+      "prerequisite",
+      "target",
+    ]);
+    expect(prerequisiteWalkthrough.edges).toEqual([
+      { from_id: "prerequisite-id", to_id: "target-id" },
+    ]);
+    expect(
+      getTargetPrerequisiteWalkthrough(walkthroughData, "missing")
+    ).toEqual({ nodes: [], edges: [] });
+  });
+
   it("places prerequisites below the target and follow-ups above it", async () => {
     const { result } = renderHook(() =>
       useGraphLayout({
@@ -97,6 +123,44 @@ describe("walkthrough graph direction", () => {
     expect(positions.get("target")).toBeGreaterThan(
       positions.get("follow-up")!
     );
+  });
+
+  it("gives distinct edge IDs to hyphen-colliding slug pairs", async () => {
+    const collisionWalkthrough: Walkthrough = {
+      nodes: ["a-b", "a", "c", "b-c"].map((slug, index) => ({
+        id: slug,
+        slug,
+        title: slug,
+        level: index < 2 ? 1 : 2,
+        summary: null,
+        duration_minutes: 10,
+        tags: [],
+      })),
+      edges: [
+        { from_id: "a-b", to_id: "c" },
+        { from_id: "a", to_id: "b-c" },
+      ],
+    };
+    const { result } = renderHook(() =>
+      useGraphLayout({
+        walkthroughData: collisionWalkthrough,
+        targetSlug: "c",
+        hoveredGuide: null,
+        nodeType: "walkthroughNode",
+        nodeWidth: 320,
+        nodeSpacing: 560,
+      })
+    );
+
+    await waitFor(() => expect(result.current.edges).toHaveLength(2));
+
+    expect(
+      result.current.edges.map(({ source, target }) => [source, target])
+    ).toEqual([
+      ["a-b", "c"],
+      ["a", "b-c"],
+    ]);
+    expect(new Set(result.current.edges.map((edge) => edge.id)).size).toBe(2);
   });
 
   it("connects edges through the facing sides of each node", () => {

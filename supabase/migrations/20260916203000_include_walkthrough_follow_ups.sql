@@ -42,7 +42,7 @@ as $$
         and e.edge_type = 'prerequisite'
         and not e.is_suspended
     )
-    union all
+    union
     select e.to_guide_base_id, fp.level + 1
     from forward_paths fp
     join public.guide_edges e

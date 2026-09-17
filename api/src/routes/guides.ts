@@ -186,12 +186,12 @@ export const guidesRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Returns the transitive prerequisite graph as { nodes, edges }.
+  // Returns the transitive prerequisite DAG with transitive follow-up context.
   .get(
     "/:slug/walkthrough",
     describeRoute({
       tags: ["guides"],
-      summary: "Guide walkthrough (transitive prerequisite DAG)",
+      summary: "Guide walkthrough with follow-up context",
       responses: {
         200: jsonContent(walkthroughSchema, "The walkthrough graph"),
         ...errorResponses(404),

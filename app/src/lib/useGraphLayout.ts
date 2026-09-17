@@ -56,6 +56,46 @@ function buildAdjacency(walkthroughData: Walkthrough) {
   return { prereqs, dependents };
 }
 
+export function getTargetPrerequisiteWalkthrough(
+  walkthroughData: Walkthrough,
+  targetSlug: string
+) {
+  const target = walkthroughData.nodes.find((node) => node.slug === targetSlug);
+  if (!target) return { nodes: [], edges: [] };
+
+  const incoming = new Map<string, Array<string>>();
+  for (const edge of walkthroughData.edges) {
+    const prerequisites = incoming.get(edge.to_id);
+    if (prerequisites) {
+      prerequisites.push(edge.from_id);
+    } else {
+      incoming.set(edge.to_id, [edge.from_id]);
+    }
+  }
+
+  const reachable = new Set([target.id]);
+  const pending = [target.id];
+  while (pending.length > 0) {
+    const nodeId = pending.pop()!;
+    for (const prerequisiteId of incoming.get(nodeId) ?? []) {
+      if (!reachable.has(prerequisiteId)) {
+        reachable.add(prerequisiteId);
+        pending.push(prerequisiteId);
+      }
+    }
+  }
+
+  const nodes = walkthroughData.nodes.filter((node) => reachable.has(node.id));
+  const nodeIds = new Set(nodes.map((node) => node.id));
+
+  return {
+    nodes,
+    edges: walkthroughData.edges.filter(
+      (edge) => nodeIds.has(edge.from_id) && nodeIds.has(edge.to_id)
+    ),
+  };
+}
+
 export function useGraphLayout({
   walkthroughData,
   targetSlug,
@@ -153,7 +193,7 @@ export function useGraphLayout({
 
         if (!isTransient) {
           newEdges.push({
-            id: `e-${prereqSlug}-${node.slug}`,
+            id: JSON.stringify([prereqSlug, node.slug]),
             source: prereqSlug,
             target: node.slug,
             type: "default",
