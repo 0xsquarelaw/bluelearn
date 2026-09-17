@@ -29,7 +29,6 @@ type UseGraphLayoutProps = {
   nodeType: string;
   nodeWidth: number;
   nodeSpacing: number;
-  targetAtBottom?: boolean;
   getNodeState?: (slug: string) => NodeState;
 };
 
@@ -64,7 +63,6 @@ export function useGraphLayout({
   nodeType,
   nodeWidth,
   nodeSpacing,
-  targetAtBottom = false,
   getNodeState = NO_NODE_STATE,
 }: UseGraphLayoutProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -91,9 +89,7 @@ export function useGraphLayout({
     const newNodes: Array<Node> = [];
     levels.forEach((level, levelIdx) => {
       const nodesInLevel = grouped[level];
-      const levelY = targetAtBottom
-        ? levelIdx * LEVEL_SPACING
-        : (maxLevelIdx - levelIdx) * LEVEL_SPACING;
+      const levelY = (maxLevelIdx - levelIdx) * LEVEL_SPACING;
 
       const totalWidth = nodesInLevel.length * nodeSpacing;
       const startX = -totalWidth / 2;
@@ -181,7 +177,6 @@ export function useGraphLayout({
     nodeType,
     nodeWidth,
     nodeSpacing,
-    targetAtBottom,
     setNodes,
     setEdges,
   ]);
