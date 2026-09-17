@@ -1,3 +1,4 @@
+-- Run after the migration that links resolved todos to prerequisite edges.
 alter table public.todo_prerequisites rename to requests;
 alter table public.todo_claims rename to request_claims;
 

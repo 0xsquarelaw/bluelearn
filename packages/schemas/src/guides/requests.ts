@@ -39,18 +39,27 @@ export const requestSchema = z.object({
     .max(500, "Summary must be 500 characters or less"),
 });
 
-export const createGuideSchema = z.object({
-  knowledge_type: knowledgeTypeSchema.default("theoretical"),
-  title: guideTitleSchema.nullish(),
-  summary: guideSummarySchema.nullish(),
-  body: guideBodySchema.nullish(),
-  tags: z.array(z.uuid()).default([]),
-  prerequisites: z.array(guideSlugSchema).default([]),
-  newSubjects: z.array(newSubjectSchema).default([]),
-  requests: z.array(requestSchema).default([]),
-  requestClaims: z.array(z.uuid()).default([]),
-  disclaimers: z.array(disclaimerSchema).default([]),
-});
+export const createGuideSchema = z
+  .object({
+    knowledge_type: knowledgeTypeSchema.default("theoretical"),
+    title: guideTitleSchema.nullish(),
+    summary: guideSummarySchema.nullish(),
+    body: guideBodySchema.nullish(),
+    tags: z.array(z.uuid()).default([]),
+    prerequisites: z.array(guideSlugSchema).default([]),
+    newSubjects: z.array(newSubjectSchema).default([]),
+    requests: z.array(requestSchema).optional(),
+    requestClaims: z.array(z.uuid()).optional(),
+    // Older tabs still send these names. Keep accepting them during the rename.
+    todoPrereqs: z.array(requestSchema).optional(),
+    todoClaims: z.array(z.uuid()).optional(),
+    disclaimers: z.array(disclaimerSchema).default([]),
+  })
+  .transform(({ todoPrereqs, todoClaims, ...guide }) => ({
+    ...guide,
+    requests: guide.requests ?? todoPrereqs ?? [],
+    requestClaims: guide.requestClaims ?? todoClaims ?? [],
+  }));
 
 // A variant starts as a draft like a guide does, so every field here is optional
 // and completeness is checked at submit. Its own slug is assigned at publish.
@@ -70,9 +79,16 @@ export const updateRevisionSchema = revisionContentSchema
     prerequisites: z.array(guideSlugSchema),
     newSubjects: z.array(newSubjectSchema),
     requests: z.array(requestSchema),
+    todoPrereqs: z.array(requestSchema),
     disclaimers: z.array(disclaimerSchema),
   })
   .partial()
+  .transform(({ todoPrereqs, ...revision }) => ({
+    ...revision,
+    ...(revision.requests !== undefined || todoPrereqs !== undefined
+      ? { requests: revision.requests ?? todoPrereqs }
+      : {}),
+  }))
   .refine((v) => Object.keys(v).length > 0, {
     message: "at least one field is required",
   });

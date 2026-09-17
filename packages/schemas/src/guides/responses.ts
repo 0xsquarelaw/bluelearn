@@ -28,6 +28,8 @@ export const guideSchema = z.object({
   tags: z.array(subjectReferenceSchema),
   prerequisites: z.array(guideReferenceSchema),
   requests: z.array(requestReferenceSchema),
+  // Kept for older clients during the API field rename.
+  todo_prerequisites: z.array(requestReferenceSchema).optional(),
   follow_ups: z.array(guideReferenceSchema).optional(),
   is_official: z.boolean(),
   disclaimers: z.array(disclaimerSchema),

@@ -386,6 +386,7 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
     prerequisites,
     requests,
     follow_ups,
+    todo_prerequisites: requests,
     is_official: guide.is_official,
     disclaimers,
   };
