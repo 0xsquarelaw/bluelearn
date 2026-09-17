@@ -1,3 +1,4 @@
+import { useId } from "react";
 import {
   ChoiceColumnFilter,
   DateColumnFilter,
@@ -11,6 +12,8 @@ import {
   validHours,
 } from "@/lib/dashboardFilters";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export function ColumnFilter<T>({
   column,
@@ -22,6 +25,7 @@ export function ColumnFilter<T>({
   onChange: (changes: DashboardFilters) => void;
 }) {
   const { key, label, kind } = column;
+  const radioId = useId();
   const direction =
     filters.sortBy === key ? filterText(filters.sortDirection) : "";
   const sort = direction === "asc" || direction === "desc" ? direction : null;
@@ -53,27 +57,30 @@ export function ColumnFilter<T>({
           })
         }
       >
-        <div
-          role="radiogroup"
+        <RadioGroup
           aria-label="Time Left range"
           className="flex flex-col gap-0.5"
+          value={mode}
+          onValueChange={(value) => onChange({ [key]: value || undefined })}
         >
           {timeLeftOptions.map((option) => (
-            <label
+            <div
               key={option.value}
               className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 hover:bg-muted"
             >
-              <input
-                type="radio"
-                name={`filter-${key}`}
+              <RadioGroupItem
+                id={`${radioId}-${option.value || "any"}`}
                 value={option.value}
-                checked={mode === option.value}
-                onChange={() => onChange({ [key]: option.value || undefined })}
               />
-              <span>{option.label}</span>
-            </label>
+              <Label
+                htmlFor={`${radioId}-${option.value || "any"}`}
+                className="flex-1 cursor-pointer"
+              >
+                {option.label}
+              </Label>
+            </div>
           ))}
-        </div>
+        </RadioGroup>
         {mode === "custom" && (
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-2">
