@@ -13,6 +13,7 @@ import { Trash2 } from "lucide-react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import {
+  activeEditor$,
   addComposerChild$,
   addExportVisitor$,
   addImportVisitor$,
@@ -27,10 +28,15 @@ import {
   realmPlugin,
   usePublisher,
 } from "@mdxeditor/editor";
+import { useCellValue } from "@mdxeditor/gurx";
 import { math } from "micromark-extension-math";
 import { mathFromMarkdown, mathToMarkdown } from "mdast-util-math";
 import { MathExportVisitor, MathImportVisitor } from "./MathVisitors";
 import { $createMathNode, MathNode } from "./MathNode";
+import {
+  $insertBlockMathInQuote,
+  $replaceTextWithBlockMathInQuote,
+} from "./MathInsertion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +94,10 @@ type MathEditorPayload = {
 
 export const OPEN_MATH_EDITOR_COMMAND = createCommand<MathEditorPayload | null>(
   "OPEN_MATH_EDITOR_COMMAND"
+);
+
+const INSERT_BLOCK_MATH_COMMAND = createCommand<void>(
+  "INSERT_BLOCK_MATH_COMMAND"
 );
 
 function isMobileDevice(): boolean {
@@ -615,6 +625,22 @@ export function MathShortcutTypeListener() {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
+    return editor.registerCommand(
+      INSERT_BLOCK_MATH_COMMAND,
+      () => {
+        const mathNode = $createMathNode("", false);
+        if (!$insertBlockMathInQuote(mathNode)) return false;
+
+        const nodeSelection = $createNodeSelection();
+        nodeSelection.add(mathNode.getKey());
+        $setSelection(nodeSelection);
+        return true;
+      },
+      COMMAND_PRIORITY_NORMAL
+    );
+  }, [editor]);
+
+  useEffect(() => {
     return editor.registerUpdateListener(
       ({ tags, dirtyLeaves, editorState }) => {
         if (tags.has("collaboration") || tags.has("historic")) return;
@@ -692,7 +718,18 @@ export function MathShortcutTypeListener() {
               scheduledInsert.equation,
               scheduledInsert.isInline
             );
-            $insertNodes([mathNode]);
+            const insertedInQuote =
+              !scheduledInsert.isInline &&
+              $replaceTextWithBlockMathInQuote(
+                node,
+                scheduledInsert.startIdx,
+                scheduledInsert.endIdx + 1,
+                mathNode
+              );
+
+            if (!insertedInQuote) {
+              $insertNodes([mathNode]);
+            }
 
             const nodeSelection = $createNodeSelection();
             nodeSelection.add(mathNode.getKey());
@@ -745,11 +782,18 @@ export function InsertInlineMath() {
 
 export function InsertBlockMath() {
   const insertDecoratorNode = usePublisher(insertDecoratorNode$);
+  const activeEditor = useCellValue(activeEditor$);
   return (
     <button
       type="button"
       onClick={() => {
-        insertDecoratorNode(() => $createMathNode("", false));
+        const insertedInQuote =
+          activeEditor?.dispatchCommand(INSERT_BLOCK_MATH_COMMAND, undefined) ??
+          false;
+
+        if (!insertedInQuote) {
+          insertDecoratorNode(() => $createMathNode("", false));
+        }
       }}
       className="flex min-h-7 min-w-7 items-center justify-center gap-1 rounded p-1.5 text-foreground transition-colors hover:bg-muted"
       title="Insert Block Math (e.g. $$f(x) = \\sin(x)$$)"
