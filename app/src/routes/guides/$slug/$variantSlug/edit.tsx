@@ -112,7 +112,7 @@ function RouteComponent() {
     })),
 
     prereqs: snapshot.prerequisites,
-    todoPrereqs: snapshot.todos,
+    requests: snapshot.todos,
     disclaimers: snapshot.disclaimers,
   }));
 
@@ -225,7 +225,7 @@ function RouteComponent() {
         title: titleBySlug.get(slug) ?? slug,
       })),
       disclaimers: guideContData.disclaimers,
-      todo_prerequisites: [],
+      requests: [],
     };
   }, [
     guideContData,
