@@ -80,7 +80,7 @@ function RouteComponent() {
     tags: variant.tags,
     prerequisites: [],
     disclaimers: variant.disclaimers,
-    todo_prerequisites: [],
+    requests: [],
   };
 
   const guideMenuItems = [];

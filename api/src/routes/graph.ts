@@ -10,7 +10,7 @@ import { CONTRIBUTION } from "../middleware/rateLimits";
 import type { HonoEnv } from "../types";
 import {
   createPrerequisiteSchema,
-  createTodoPrerequisiteSchema,
+  createRequestSchema,
   prerequisiteResponseSchema,
   todoListResponseSchema,
   todoResponseSchema,
@@ -109,7 +109,7 @@ export const todosRouter = new Hono<HonoEnv>()
     requireUser,
     requireUnsuspendedUser,
     rateLimitMiddleware({ ...CONTRIBUTION, bucket: "todo-create" }),
-    validate("json", createTodoPrerequisiteSchema),
+    validate("json", createRequestSchema),
     async (c) => {
       const { guide_base_id, title, summary } = c.req.valid("json");
       const todo = await createTodo(
