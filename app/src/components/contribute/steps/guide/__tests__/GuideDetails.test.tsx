@@ -78,7 +78,7 @@ const guide: GuideContribution = {
   subjects: [],
   newSubjects: [],
   prereqs: [],
-  todoPrereqs: [],
+  requests: [],
   disclaimers: [],
 };
 
