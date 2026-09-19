@@ -1,4 +1,9 @@
-create or replace function public.compute_walkthrough(p_guide_base_id uuid)
+drop function public.compute_walkthrough(uuid);
+
+create or replace function public.compute_walkthrough(
+  p_guide_base_id uuid,
+  p_follow_up_depth integer default 1
+)
 returns jsonb
 language sql
 security invoker
@@ -16,14 +21,15 @@ as $$
      and not e.is_suspended
   ),
   follow_up_closure as (
-    select p_guide_base_id as node_id
+    select p_guide_base_id as node_id, 0 as depth
     union
-    select e.to_guide_base_id
+    select e.to_guide_base_id, c.depth + 1
     from follow_up_closure c
     join public.guide_edges e
       on e.from_guide_base_id = c.node_id
      and e.edge_type = 'prerequisite'
      and not e.is_suspended
+    where c.depth < least(greatest(coalesce(p_follow_up_depth, 1), 0), 100)
   ),
   closure as (
     select node_id from prerequisite_closure
@@ -104,4 +110,4 @@ as $$
   );
 $$;
 
-grant execute on function public.compute_walkthrough(uuid) to anon, authenticated;
+grant execute on function public.compute_walkthrough(uuid, integer) to anon, authenticated;

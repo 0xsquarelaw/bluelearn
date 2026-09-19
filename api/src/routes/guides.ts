@@ -192,7 +192,7 @@ export const guidesRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Returns the target's transitive prerequisite and follow-up graph as { nodes, edges }.
+  // Returns transitive prerequisites and direct follow-ups as { nodes, edges }.
   .get(
     "/:slug/walkthrough",
     describeRoute({
