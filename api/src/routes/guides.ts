@@ -67,9 +67,10 @@ import {
 } from "../services/search.service";
 
 // Normalize a blank summary to NULL to match the create_guide RPC defaults.
-const createGuideBody = createGuideSchema.extend({
-  summary: createGuideSchema.shape.summary.transform((v) => v || null),
-});
+const createGuideBody = createGuideSchema.transform((guide) => ({
+  ...guide,
+  summary: guide.summary || null,
+}));
 
 // Same NULL normalization for create_variant.
 const createVariantBody = createVariantSchema.extend({
