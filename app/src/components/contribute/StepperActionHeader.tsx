@@ -115,13 +115,15 @@ export const StepperActionHeader = ({
             </button>
           )}
 
-          <button
-            type="button"
-            className="rounded-md border bg-background px-3 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-muted"
-            onClick={() => setOpenAddGuideNodeModal((open) => !open)}
-          >
-            Add Guide
-          </button>
+          {type == "objective" && (
+            <button
+              type="button"
+              className="btn-sec inline-flex items-center gap-2 disabled:pointer-events-none disabled:opacity-50"
+              onClick={() => setOpenAddGuideNodeModal((open) => !open)}
+            >
+              Add Guide
+            </button>
+          )}
 
           {!hideBackBtn && (
             <Stepper.Prev className="btn-sec">Back</Stepper.Prev>
