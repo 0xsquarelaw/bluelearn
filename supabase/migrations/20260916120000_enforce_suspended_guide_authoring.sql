@@ -101,17 +101,13 @@ create policy "Active authors can suspend prerequisites"
 -- Live databases can apply the requests rename before this older migration.
 do $$
 declare
-  requests_table regclass := coalesce(
-    to_regclass('public.requests'), to_regclass('public.todo_prerequisites')
+  requests_table text := coalesce(
+    to_regclass('public.requests')::text, 'public.todo_prerequisites'
   );
-  claims_table regclass := coalesce(
-    to_regclass('public.request_claims'), to_regclass('public.todo_claims')
+  claims_table text := coalesce(
+    to_regclass('public.request_claims')::text, 'public.todo_claims'
   );
 begin
-  if requests_table is null or claims_table is null then
-    raise exception 'Request and claim tables must exist before suspension policies are applied';
-  end if;
-
   execute format(
     'create policy "Active authors can insert todos" on %s as restrictive for insert to authenticated
      with check ((select public.is_active_guide_author()))',
