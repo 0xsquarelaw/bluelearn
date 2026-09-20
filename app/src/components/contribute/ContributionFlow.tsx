@@ -489,6 +489,16 @@ function Inner({
     step
   );
 
+  // whether the active contribution has edits that haven't been saved yet
+  const isDirty =
+    type === "guide"
+      ? guideSave.isDirty
+      : type === "variant"
+        ? variantSave.isDirty
+        : type === "objective"
+          ? objectiveSave.isDirty
+          : false;
+
   const [submitting, setSubmitting] = useState(false);
 
   const [publishAttempted, setPublishAttempted] = useState(false);
@@ -1272,6 +1282,7 @@ function Inner({
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
           submitting={submitting}
+          isDirty={isDirty}
         />
 
         <PreviewGuide
@@ -1286,6 +1297,7 @@ function Inner({
           onSaveDraft={saveDraft}
           onPublish={publish}
           submitting={submitting}
+          isDirty={isDirty}
         />
 
         <VariantInfo
@@ -1300,6 +1312,7 @@ function Inner({
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
           submitting={submitting}
+          isDirty={isDirty}
         />
 
         <PreviewVariant
@@ -1310,6 +1323,7 @@ function Inner({
           onSaveDraft={saveDraft}
           onPublish={publish}
           submitting={submitting}
+          isDirty={isDirty}
         />
 
         <ObjectiveDetails
@@ -1323,6 +1337,7 @@ function Inner({
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
           submitting={submitting}
+          isDirty={isDirty}
         />
 
         <OrderTargetGuides
@@ -1331,6 +1346,7 @@ function Inner({
           setObjectiveContData={setObjectiveContData}
           onSaveDraft={saveDraft}
           submitting={submitting}
+          isDirty={isDirty}
           guides={guideOptions}
         />
 
@@ -1340,6 +1356,7 @@ function Inner({
           setObjectiveContData={setObjectiveContData}
           onSaveDraft={saveDraft}
           submitting={submitting}
+          isDirty={isDirty}
           guides={guideOptions}
         />
 
@@ -1349,6 +1366,7 @@ function Inner({
           onSaveDraft={saveDraft}
           onPublish={publish}
           submitting={submitting}
+          isDirty={isDirty}
           guideOptions={guideOptions}
           subjectOptions={subjectOptions}
         />

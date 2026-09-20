@@ -391,6 +391,8 @@ export function clearStoredDraftsByType(type: ContributionType): void {
 
 export interface ContributionSaveControls {
   cancel: () => void;
+  /** true when there are edits that haven't been flushed to localStorage yet */
+  isDirty: boolean;
 }
 
 /**
@@ -450,6 +452,18 @@ export function useDebouncedContributionSave(
 
   const isPendingRef = useRef(false);
 
+  /*
+   * isDirty compares serialized content rather than object identity.
+   * Callers (e.g. a `{ ...guide }` spread) may pass a brand-new object
+   * on every render even when nothing actually changed - comparing by
+   * reference would flag those renders as edits and flicker the save
+   * status back to "unsaved" right after a save completes.
+   */
+  const dataSignature = localDraftId && type ? JSON.stringify(data) : null;
+  const lastSavedSignatureRef = useRef<string | null>(dataSignature);
+  const isDirty =
+    dataSignature !== null && dataSignature !== lastSavedSignatureRef.current;
+
   // keep the latest contribution data available
   if (localDraftId && type) {
     pendingRef.current = {
@@ -483,6 +497,8 @@ export function useDebouncedContributionSave(
     if (!pending) {
       return;
     }
+
+    lastSavedSignatureRef.current = JSON.stringify(pending.data);
 
     switch (pending.type) {
       case "guide":
@@ -524,6 +540,7 @@ export function useDebouncedContributionSave(
   const cancel = () => {
     clearTimer();
     isPendingRef.current = false;
+    lastSavedSignatureRef.current = dataSignature;
   };
 
   const flushRef = useRef(flush);
@@ -549,7 +566,7 @@ export function useDebouncedContributionSave(
     }, delay);
 
     return clearTimer;
-  }, [localDraftId, type, data, revisionId, step, delay]);
+  }, [localDraftId, type, dataSignature, revisionId, step, delay]);
 
   // flush anything still waiting when the component unmounts.
   useEffect(() => {
@@ -560,5 +577,6 @@ export function useDebouncedContributionSave(
 
   return {
     cancel: () => cancelRef.current(),
+    isDirty,
   };
 }
