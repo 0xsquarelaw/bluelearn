@@ -1,14 +1,18 @@
+import { useEffect, useState } from "react";
 import {
   reviewCaseTypeSchema,
   reviewSeatStatusSchema,
   userStatusSchema,
 } from "@bluelearn/schemas";
-import { useEffect, useState } from "react";
-import { Checkbox } from "../ui/checkbox";
+
 import type { AssignmentTable } from "@/lib/api/dashboard";
 import type { DashboardColumn } from "@/lib/dashboardFilters";
 import { useDashboardFilters } from "@/lib/dashboardFilters";
+import { formatDate } from "@/lib/guideUtils";
+import { deadlineTickMs, formatTimeRemaining } from "@/lib/reviewDeadline";
+
 import { ColumnFilter } from "@/components/tables/ColumnFilter";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -18,8 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDate } from "@/lib/guideUtils";
-import { deadlineTickMs, formatTimeRemaining } from "@/lib/reviewDeadline";
 
 type AssignmentsTableProps = {
   assignmentsData: AssignmentTable;

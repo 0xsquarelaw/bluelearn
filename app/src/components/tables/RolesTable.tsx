@@ -63,6 +63,7 @@ export const RolesTable = ({
     setSelectedIds,
     (row) => row.id
   );
+
   const allSelected =
     visibleRows.length > 0 &&
     visibleRows.every((profile) => selectedIds.has(profile.id));
@@ -126,6 +127,7 @@ export const RolesTable = ({
             </TableCell>
           </TableRow>
         )}
+
         {visibleRows.map((user) => (
           <TableRow key={user.id}>
             <TableCell className="w-12 px-4 py-3">
