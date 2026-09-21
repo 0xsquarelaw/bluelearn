@@ -35,6 +35,9 @@ vi.mock("@stepperize/react", () => ({
 }));
 
 vi.mock("@/lib/auth", () => ({ requireSession: vi.fn() }));
+vi.mock("@/lib/authContext", () => ({
+  useSuspensionStatus: () => "active",
+}));
 vi.mock("@/lib/api/guides", () => ({
   listGuides: () => Promise.resolve([]),
 }));
