@@ -3,8 +3,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ContributionType } from "@/types/contributions";
 import ContributionFlow from "@/components/contribute/ContributionFlow";
 import { requireSession } from "@/lib/auth";
+import { useAuth, useSuspensionStatus } from "@/lib/authContext";
 import { RejectionFeedback } from "@/components/review/RejectionFeedback";
 import { ErrorFallback } from "@/components/ErrorFallback";
+import { AccountStatusNotice } from "@/components/AccountStatusNotice";
+import { buildPageMeta } from "@/lib/seo";
 
 export type ContributeSearch = {
   draft?: string;
@@ -18,7 +21,34 @@ export type ContributeSearch = {
   todos?: string;
 };
 
+// True when the URL itself asks for guide or variant authoring: a picked type,
+// a todo seed, or a resumed guide/variant draft.
+// Objective drafts always ride with kind=objective (ActivityTable, ReviewSidebar),
+// so a bare draft id is a guide or variant.
+// Objective work and the blank type picker pass through.
+export function requestsGuideAuthoring(search: ContributeSearch) {
+  if (
+    search.contributionType === "guide" ||
+    search.contributionType === "variant"
+  ) {
+    return true;
+  }
+
+  if (search.todoTitle || search.todos) return true;
+
+  return !!search.draft && search.kind !== "objective";
+}
+
 export const Route = createFileRoute("/contribute")({
+  head: () => ({
+    // The form is client-only and can redirect to login before it loads.
+    meta: import.meta.env.SSR
+      ? []
+      : buildPageMeta(
+          "Contribute",
+          "Share what you know on Bluelearn. Write a guide, offer a different explanation, or create a learning objective."
+        ),
+  }),
   ssr: false,
   beforeLoad: requireSession,
   validateSearch: (search: Record<string, unknown>): ContributeSearch => {
@@ -60,6 +90,28 @@ export const Route = createFileRoute("/contribute")({
 });
 
 function RouteComponent() {
+  const search = Route.useSearch();
+  const { roles } = useAuth();
+  const status = useSuspensionStatus();
+
+  if (status === "pending") return null;
+  if (status === "unavailable") {
+    return <AccountStatusNotice status="unavailable" />;
+  }
+
+  if (status === "suspended") {
+    const isCurator = roles.includes("curator");
+    const refused = !isCurator || requestsGuideAuthoring(search);
+
+    if (refused) {
+      return <AccountStatusNotice status="suspended" />;
+    }
+  }
+
+  return <ContributePage />;
+}
+
+function ContributePage() {
   const {
     draft,
     kind,
