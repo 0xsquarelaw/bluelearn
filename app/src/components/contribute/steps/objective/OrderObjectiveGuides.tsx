@@ -20,6 +20,7 @@ import { DraggableGuideCard } from "@/components/contribute/DraggableGuideCard";
 import { Badge } from "@/components/ui/badge";
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
 import { formatDuration } from "@/lib/guideUtils";
+import { getTargetPrerequisiteWalkthrough } from "@/lib/useGraphLayout";
 import {
   Card,
   CardContent,
@@ -97,7 +98,7 @@ export const OrderObjectiveGuides = ({
     const controller = new AbortController();
     getGuideWalkthrough(targetSlug, { signal: controller.signal })
       .then((data) => {
-        setWalkthroughData(data);
+        setWalkthroughData(getTargetPrerequisiteWalkthrough(data, targetSlug));
         setWalkthroughSlug(targetSlug);
       })
       .catch((err) => {
