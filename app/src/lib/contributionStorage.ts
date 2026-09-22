@@ -393,6 +393,10 @@ export interface ContributionSaveControls {
   cancel: () => void;
   /** true when there are edits that haven't been flushed to localStorage yet */
   isDirty: boolean;
+  /** true when the content last flushed to localStorage matches what was last confirmed saved to the server */
+  isSynced: boolean;
+  /** call after a successful server save to mark the current content as synced */
+  markSynced: () => void;
 }
 
 /**
@@ -463,6 +467,20 @@ export function useDebouncedContributionSave(
   const lastSavedSignatureRef = useRef<string | null>(dataSignature);
   const isDirty =
     dataSignature !== null && dataSignature !== lastSavedSignatureRef.current;
+
+  /*
+   * isSynced tracks whether the content is confirmed saved to the server,
+   * as opposed to only autosaved to this browser's localStorage. It starts
+   * out false (never assume a resumed draft matches the server without an
+   * explicit save in this session) and only becomes true via markSynced().
+   */
+  const lastSyncedSignatureRef = useRef<string | null>(null);
+  const isSynced =
+    dataSignature === null || dataSignature === lastSyncedSignatureRef.current;
+
+  const markSynced = () => {
+    lastSyncedSignatureRef.current = dataSignature;
+  };
 
   // keep the latest contribution data available
   if (localDraftId && type) {
@@ -541,6 +559,7 @@ export function useDebouncedContributionSave(
     clearTimer();
     isPendingRef.current = false;
     lastSavedSignatureRef.current = dataSignature;
+    lastSyncedSignatureRef.current = dataSignature;
   };
 
   const flushRef = useRef(flush);
@@ -548,6 +567,9 @@ export function useDebouncedContributionSave(
 
   const cancelRef = useRef(cancel);
   cancelRef.current = cancel;
+
+  const markSyncedRef = useRef(markSynced);
+  markSyncedRef.current = markSynced;
 
   // start debounce timer whenever the contribution changes
   useEffect(() => {
@@ -578,5 +600,7 @@ export function useDebouncedContributionSave(
   return {
     cancel: () => cancelRef.current(),
     isDirty,
+    isSynced,
+    markSynced: () => markSyncedRef.current(),
   };
 }

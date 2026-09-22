@@ -1,4 +1,4 @@
-import { Check, Loader2, Save, Scroll } from "lucide-react";
+import { Check, HardDrive, Loader2, Save, Scroll } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { ContributionType } from "@/types/contributions";
@@ -9,6 +9,11 @@ import { GuidelinesModal } from "@/components/modals/GuidelinesModal";
 import { GuideSubmitModal } from "@/components/modals/GuideSubmitModal";
 import { ObjectivePublishModal } from "@/components/modals/ObjectivePublishModal";
 import { getAllStoredDrafts } from "@/lib/contributionStorage";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type PropTypes = {
   title: string;
@@ -23,11 +28,13 @@ type PropTypes = {
   guideCount?: number;
   // whether the current draft has edits that haven't been saved yet
   isDirty?: boolean;
+  // whether the locally saved content is confirmed saved to the server too
+  isSynced?: boolean;
   onSaveDraft?: () => void | boolean | Promise<void | boolean>;
   onPublish?: () => void;
 };
 
-type SaveStatus = "saving" | "unsaved" | "saved";
+type SaveStatus = "saving" | "unsaved" | "saved-locally" | "saved";
 
 const SaveStatusIndicator = ({
   status,
@@ -35,40 +42,62 @@ const SaveStatusIndicator = ({
 }: {
   status: SaveStatus;
   labelClassName?: string;
-}) => (
-  <span className="inline-flex shrink-0 items-center gap-1.5 font-mono text-xs tracking-[0.08em] uppercase">
-    {status === "saving" && (
-      <>
-        <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
-        <span className={`text-muted-foreground ${labelClassName}`}>
-          Saving
-        </span>
-      </>
-    )}
+}) => {
+  const label = (
+    <span className="inline-flex shrink-0 items-center gap-1.5 font-mono text-xs tracking-[0.08em] uppercase">
+      {status === "saving" && (
+        <>
+          <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
+          <span className={`text-muted-foreground ${labelClassName}`}>
+            Saving
+          </span>
+        </>
+      )}
 
-    {status === "unsaved" && (
-      <>
-        <span className="size-1.5 shrink-0 rounded-full bg-amber-500" />
-        <span
-          className={`text-amber-700 dark:text-amber-400 ${labelClassName}`}
-        >
-          Unsaved
-        </span>
-      </>
-    )}
+      {status === "unsaved" && (
+        <>
+          <span className="size-1.5 shrink-0 rounded-full bg-amber-500" />
+          <span
+            className={`text-amber-700 dark:text-amber-400 ${labelClassName}`}
+          >
+            Unsaved
+          </span>
+        </>
+      )}
 
-    {status === "saved" && (
-      <>
-        <Check className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-        <span
-          className={`text-emerald-700 dark:text-emerald-400 ${labelClassName}`}
-        >
-          Saved
-        </span>
-      </>
-    )}
-  </span>
-);
+      {(status === "saved" || status === "saved-locally") && (
+        <>
+          {status === "saved" ? (
+            <Check className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          ) : (
+            <HardDrive className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          )}
+          <span
+            className={`text-emerald-700 dark:text-emerald-400 ${labelClassName}`}
+          >
+            Saved
+          </span>
+        </>
+      )}
+    </span>
+  );
+
+  if (status !== "saved-locally") {
+    return label;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0}>{label}</span>
+      </TooltipTrigger>
+      <TooltipContent>
+        Only saved in this browser - click Save Draft to sync it to your
+        account.
+      </TooltipContent>
+    </Tooltip>
+  );
+};
 
 export const StepperActionHeader = ({
   title,
@@ -80,6 +109,7 @@ export const StepperActionHeader = ({
   publishLabel = "Submit for Review",
   guideCount = 1,
   isDirty,
+  isSynced,
   hideBackBtn,
   hideGuidelines,
   onSaveDraft,
@@ -103,7 +133,9 @@ export const StepperActionHeader = ({
     ? "saving"
     : isDirty
       ? "unsaved"
-      : "saved";
+      : isSynced === false
+        ? "saved-locally"
+        : "saved";
 
   useEffect(() => {
     // get all drafts from localstorage

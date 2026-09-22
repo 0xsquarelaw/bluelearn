@@ -42,6 +42,7 @@ type PropTypes = {
   onSaveDraft?: () => void;
   submitting?: boolean;
   isDirty?: boolean;
+  isSynced?: boolean;
   guides: Array<any>;
 };
 
@@ -52,6 +53,7 @@ export const OrderObjectiveGuides = ({
   onSaveDraft,
   submitting,
   isDirty,
+  isSynced,
   guides,
 }: PropTypes) => {
   const guidesMap = useMemo(
@@ -302,6 +304,7 @@ export const OrderObjectiveGuides = ({
         onSaveDraft={onSaveDraft}
         submitting={submitting}
         isDirty={isDirty}
+        isSynced={isSynced}
       />
 
       <FieldGroup className="mt-0 flex min-h-0 flex-1 flex-col">

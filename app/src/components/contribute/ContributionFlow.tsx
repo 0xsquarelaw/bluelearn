@@ -499,6 +499,16 @@ function Inner({
           ? objectiveSave.isDirty
           : false;
 
+  // whether the locally saved content is confirmed saved to the server too
+  const isSynced =
+    type === "guide"
+      ? guideSave.isSynced
+      : type === "variant"
+        ? variantSave.isSynced
+        : type === "objective"
+          ? objectiveSave.isSynced
+          : true;
+
   const [submitting, setSubmitting] = useState(false);
 
   const [publishAttempted, setPublishAttempted] = useState(false);
@@ -986,6 +996,8 @@ function Inner({
             )
           );
         }
+
+        guideSave.markSynced();
       }
 
       if (type === "variant") {
@@ -996,6 +1008,8 @@ function Inner({
           id,
           step
         );
+
+        variantSave.markSynced();
       }
 
       if (type === "objective") {
@@ -1006,6 +1020,8 @@ function Inner({
           id,
           step
         );
+
+        objectiveSave.markSynced();
       }
 
       toast.success("Draft saved");
@@ -1283,6 +1299,7 @@ function Inner({
           onSaveDraft={saveDraft}
           submitting={submitting}
           isDirty={isDirty}
+          isSynced={isSynced}
         />
 
         <PreviewGuide
@@ -1298,6 +1315,7 @@ function Inner({
           onPublish={publish}
           submitting={submitting}
           isDirty={isDirty}
+          isSynced={isSynced}
         />
 
         <VariantInfo
@@ -1313,6 +1331,7 @@ function Inner({
           onSaveDraft={saveDraft}
           submitting={submitting}
           isDirty={isDirty}
+          isSynced={isSynced}
         />
 
         <PreviewVariant
@@ -1324,6 +1343,7 @@ function Inner({
           onPublish={publish}
           submitting={submitting}
           isDirty={isDirty}
+          isSynced={isSynced}
         />
 
         <ObjectiveDetails
@@ -1338,6 +1358,7 @@ function Inner({
           onSaveDraft={saveDraft}
           submitting={submitting}
           isDirty={isDirty}
+          isSynced={isSynced}
         />
 
         <OrderTargetGuides
@@ -1347,6 +1368,7 @@ function Inner({
           onSaveDraft={saveDraft}
           submitting={submitting}
           isDirty={isDirty}
+          isSynced={isSynced}
           guides={guideOptions}
         />
 
@@ -1357,6 +1379,7 @@ function Inner({
           onSaveDraft={saveDraft}
           submitting={submitting}
           isDirty={isDirty}
+          isSynced={isSynced}
           guides={guideOptions}
         />
 
@@ -1367,6 +1390,7 @@ function Inner({
           onPublish={publish}
           submitting={submitting}
           isDirty={isDirty}
+          isSynced={isSynced}
           guideOptions={guideOptions}
           subjectOptions={subjectOptions}
         />
