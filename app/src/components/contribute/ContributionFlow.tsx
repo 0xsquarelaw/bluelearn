@@ -463,7 +463,7 @@ function Inner({
 
   const {
     revisionId: removedRevisionId,
-    localDraftId,
+    localDraftId: removedLocalDraftId,
     ...savedGuide
   } = activeGuide;
 
