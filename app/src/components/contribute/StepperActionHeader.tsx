@@ -92,8 +92,7 @@ const SaveStatusIndicator = ({
         <span tabIndex={0}>{label}</span>
       </TooltipTrigger>
       <TooltipContent>
-        Only saved in this browser - click Save Draft to sync it to your
-        account.
+        Saved in this browser - Save Draft to sync to your account.
       </TooltipContent>
     </Tooltip>
   );
