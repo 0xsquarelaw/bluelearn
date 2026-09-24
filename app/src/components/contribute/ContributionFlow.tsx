@@ -463,8 +463,29 @@ function Inner({
     if (draftId) {
       return draftId;
     }
+
+    if (!editSlug && type === "variant") {
+      return getStoredDraftsByType("variant")[0]?.revisionId ?? null;
+    }
+
+    if (!editSlug && type === "objective") {
+      return getStoredDraftsByType("objective")[0]?.revisionId ?? null;
+    }
+
     return null;
   });
+
+  useEffect(() => {
+    if (draftId || editSlug) {
+      return;
+    }
+
+    if (type === "variant") {
+      setRevisionId(getStoredDraftsByType("variant")[0]?.revisionId ?? null);
+    } else if (type === "objective") {
+      setRevisionId(getStoredDraftsByType("objective")[0]?.revisionId ?? null);
+    }
+  }, [draftId, editSlug, type]);
 
   const [autosaveReady, setAutosaveReady] = useState(!draftId && !editSlug);
 
@@ -1032,9 +1053,22 @@ function Inner({
     type === "guide"
       ? true
       : type === "variant"
-        ? Boolean(variantContData.baseGuide)
+        ? Boolean(
+            variantContData.baseGuide &&
+            guideOptions.some(
+              (guide) => guide.slug === variantContData.baseGuide
+            )
+          )
         : type === "objective"
-          ? objectiveContData.targets.length > 0
+          ? objectiveContData.targets.length > 0 &&
+            objectiveContData.targets.every((slug) =>
+              guideOptions.some((guide) => guide.slug === slug)
+            ) &&
+            objectiveContData.subObjectives.every((subObjective) =>
+              subObjective.curatedSequence.every((slug) =>
+                guideOptions.some((guide) => guide.slug === slug)
+              )
+            )
           : false;
 
   runAutosaveRef.current = () => {
@@ -1107,6 +1141,7 @@ function Inner({
   }, [
     autosaveDataKey,
     autosaveReady,
+    guideOptions,
     hasAutosaveContent,
     hasServerAutosavePrerequisites,
     type,
