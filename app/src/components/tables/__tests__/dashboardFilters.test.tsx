@@ -13,9 +13,14 @@ import type {
   DashboardRoleRow,
   MemberRow,
 } from "@/lib/api/dashboard";
-import { MembersTable } from "@/components/tables/MembersTable";
-import { RolesTable } from "@/components/tables/RolesTable";
-import { AssignmentsTable } from "@/components/tables/AssignmentsTable";
+import type { DashboardFilters } from "@/lib/dashboardFilters";
+import { dashboardQuery } from "@/lib/dashboardFilters";
+import { MembersTable, memberColumns } from "@/components/tables/MembersTable";
+import { RolesTable, roleColumns } from "@/components/tables/RolesTable";
+import {
+  AssignmentsTable,
+  assignmentColumns,
+} from "@/components/tables/AssignmentsTable";
 
 const members: Array<MemberRow> = [
   {
@@ -70,6 +75,14 @@ const assignments: AssignmentTable = [
   },
 ];
 
+const columnsFor = {
+  members: memberColumns,
+  roles: roleColumns,
+  assignments: assignmentColumns,
+};
+
+// Renders a table the way its route does, and shows the API query the
+// current filters would load.
 function Dashboard({
   table,
   empty = false,
@@ -78,11 +91,21 @@ function Dashboard({
   empty?: boolean;
 }) {
   const [selectedIds, setSelectedIds] = useState(new Set<string>());
-  const props = { selectedIds, setSelectedIds };
+  const [filters, setFilters] = useState<DashboardFilters>({});
+  const props = {
+    selectedIds,
+    setSelectedIds,
+    filters,
+    onFiltersChange: (changes: DashboardFilters) =>
+      setFilters((current) => ({ ...current, ...changes })),
+  };
   return (
     <>
       <output aria-label="Selected rows">
         {[...selectedIds].sort().join(",")}
+      </output>
+      <output aria-label="Query">
+        {JSON.stringify(dashboardQuery(columnsFor[table], filters))}
       </output>
       {table === "members" ? (
         <MembersTable MemberData={empty ? [] : members} {...props} />
@@ -98,6 +121,9 @@ function Dashboard({
   );
 }
 
+function query(): Record<string, string | Array<string>> {
+  return JSON.parse(screen.getByLabelText("Query").textContent);
+}
 function openFilter(label: string) {
   fireEvent.click(screen.getByRole("button", { name: `Filter ${label}` }));
   return screen.getByRole("dialog", { name: `Filter ${label}` });
@@ -107,25 +133,21 @@ function closeFilter() {
 }
 afterEach(cleanup);
 
-it("searches members case-insensitively and clears hidden bulk selections", () => {
+it("sends a trimmed member search and drops it when cleared", () => {
   render(<Dashboard table="members" />);
-  fireEvent.click(screen.getByRole("checkbox", { name: "Select all users" }));
-  expect(screen.getByLabelText("Selected rows").textContent).toBe("alice,bob");
   openFilter("Display Name");
   fireEvent.change(screen.getByRole("searchbox"), {
     target: { value: "  SMITH " },
   });
-  expect(screen.getByLabelText("Selected rows").textContent).toBe("alice");
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
+  expect(query().display_name).toBe("SMITH");
   closeFilter();
   fireEvent.click(
     screen.getByRole("button", { name: "Clear Display Name filter" })
   );
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(2);
-  expect(screen.getByLabelText("Selected rows").textContent).toBe("alice");
+  expect(query()).not.toHaveProperty("display_name");
 });
 
-it("combines member text and status filters with an empty state", () => {
+it("combines member text and status filters", () => {
   render(<Dashboard table="members" />);
   openFilter("Username");
   fireEvent.change(screen.getByRole("searchbox"), {
@@ -134,21 +156,14 @@ it("combines member text and status filters with an empty state", () => {
   closeFilter();
   const popup = openFilter("Status");
   fireEvent.click(within(popup).getByRole("checkbox", { name: "inactive" }));
-  expect(screen.getByText("No data matches these filters")).toBeDefined();
+  expect(query()).toMatchObject({ username: "alice", status: ["inactive"] });
   closeFilter();
   fireEvent.click(screen.getByRole("button", { name: "Clear Status filter" }));
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
+  expect(query()).not.toHaveProperty("status");
+  expect(query().username).toBe("alice");
 });
 
-it("searches the displayed username when display name is missing", () => {
-  render(<Dashboard table="members" />);
-  openFilter("Display Name");
-  fireEvent.change(screen.getByRole("searchbox"), { target: { value: "bob" } });
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
-  expect(document.querySelector("tbody")?.textContent).toContain("bob");
-});
-
-it("filters dates inclusively and clears both bounds", () => {
+it("sends picked days as local midnights, the end day included", () => {
   render(<Dashboard table="members" />);
   openFilter("Date Created");
   for (const bound of ["from", "to"]) {
@@ -167,51 +182,63 @@ it("filters dates inclusively and clears both bounds", () => {
     const dialogs = screen.getAllByRole("dialog");
     fireEvent.keyDown(dialogs[dialogs.length - 1], { key: "Escape" });
   }
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
-  expect(document.querySelector("tbody")?.textContent).toContain("bob");
+  expect(query()).toMatchObject({
+    date_created_from: new Date(2026, 8, 10).toISOString(),
+    date_created_to: new Date(2026, 8, 11).toISOString(),
+  });
   closeFilter();
   fireEvent.click(
     screen.getByRole("button", { name: "Clear Date Created filter" })
   );
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(2);
+  expect(query()).not.toHaveProperty("date_created_from");
+  expect(query()).not.toHaveProperty("date_created_to");
 });
 
-it("matches individual roles and selects or deselects only visible users", () => {
+it("sends picked roles and selects or deselects every row on the page", () => {
   render(<Dashboard table="roles" />);
   openFilter("Roles");
   fireEvent.click(screen.getByRole("checkbox", { name: "moderator" }));
   closeFilter();
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
+  expect(query().roles).toEqual(["moderator"]);
   fireEvent.click(screen.getByRole("checkbox", { name: "Select all users" }));
-  expect(screen.getByLabelText("Selected rows").textContent).toBe("alice");
+  expect(screen.getByLabelText("Selected rows").textContent).toBe("alice,bob");
   fireEvent.click(screen.getByRole("checkbox", { name: "Select all users" }));
   expect(screen.getByLabelText("Selected rows").textContent).toBe("");
 });
 
-it("can filter users without roles", () => {
-  render(<Dashboard table="roles" />);
-  openFilter("Roles");
-  fireEvent.click(screen.getByRole("checkbox", { name: "No roles" }));
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
-  expect(document.querySelector("tbody")?.textContent).toContain("bob");
-});
+it.each([
+  ["roles", "Roles", "No roles", "roles"],
+  ["roles", "Status", "No status", "status"],
+  ["members", "Status", "No Status", "status"],
+  ["assignments", "Assignee Status", "No status.", "user_status"],
+] as const)(
+  "sends the %s %s choice %s as none",
+  (table, label, choice, key) => {
+    render(<Dashboard table={table} />);
+    const popup = openFilter(label);
+    fireEvent.click(within(popup).getByRole("checkbox", { name: choice }));
+    expect(query()[key]).toEqual(["none"]);
+  }
+);
 
-it("searches guide titles without conflating assignments for the same user", () => {
+it("selects assignments of the same user one panel at a time", () => {
   render(<Dashboard table="assignments" />);
-  fireEvent.click(
-    screen.getByRole("checkbox", { name: "Select all assignments" })
-  );
   openFilter("Title");
   fireEvent.change(screen.getByRole("searchbox"), {
     target: { value: "GRAV" },
   });
   closeFilter();
+  expect(query().title).toBe("GRAV");
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: "Select alice - Gravity" })
+  );
   expect(screen.getByLabelText("Selected rows").textContent).toBe("alice:one");
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
   fireEvent.click(
     screen.getByRole("checkbox", { name: "Select all assignments" })
   );
-  expect(screen.getByLabelText("Selected rows").textContent).toBe("");
+  expect(screen.getByLabelText("Selected rows").textContent).toBe(
+    "alice:one,alice:two"
+  );
 });
 
 it("combines assignment type and status filters", () => {
@@ -221,7 +248,7 @@ it("combines assignment type and status filters", () => {
   closeFilter();
   openFilter("Status");
   fireEvent.click(screen.getByRole("checkbox", { name: "assigned" }));
-  expect(screen.getByText("No data matches these filters")).toBeDefined();
+  expect(query()).toMatchObject({ type: ["guide_edit"], status: ["assigned"] });
 });
 
 describe.each(["members", "roles", "assignments"] as const)(
@@ -233,7 +260,7 @@ describe.each(["members", "roles", "assignments"] as const)(
         table === "members" ? 6 : table === "roles" ? 5 : 9
       );
     });
-    it("handles an empty dataset without selecting any rows", () => {
+    it("handles an empty page without selecting any rows", () => {
       render(<Dashboard table={table} empty />);
       expect(screen.getByText("No data matches these filters")).toBeDefined();
       fireEvent.click(screen.getByRole("checkbox", { name: /^Select all/ }));
@@ -246,22 +273,23 @@ it("sorts text in both directions and clears the active heading", () => {
   render(<Dashboard table="members" />);
   const popup = openFilter("Username");
   fireEvent.click(within(popup).getByRole("button", { name: "Sort Z - A" }));
-  expect(document.querySelector("tbody tr")?.textContent).toContain("bob");
+  expect(query()).toMatchObject({ sortBy: "username", sortDirection: "desc" });
   expect(
     screen.getByRole("button", { name: "Filter Username" }).className
   ).toContain("text-brand-bright-blue");
   fireEvent.click(within(popup).getByRole("button", { name: "Sort A - Z" }));
-  expect(document.querySelector("tbody tr")?.textContent).toContain("alice");
+  expect(query()).toMatchObject({ sortBy: "username", sortDirection: "asc" });
   closeFilter();
   fireEvent.click(
     screen.getByRole("button", { name: "Clear Username filter" })
   );
+  expect(query()).not.toHaveProperty("sortBy");
   expect(
     screen.queryByRole("button", { name: "Clear Username filter" })
   ).toBeNull();
 });
 
-it("sorts dates in both directions and preserves another column's sort on clear", () => {
+it("keeps another column's sort when a text filter is cleared", () => {
   render(<Dashboard table="members" />);
   openFilter("Username");
   fireEvent.change(screen.getByRole("searchbox"), { target: { value: "o" } });
@@ -272,28 +300,30 @@ it("sorts dates in both directions and preserves another column's sort on clear"
   fireEvent.click(
     screen.getByRole("button", { name: "Clear Username filter" })
   );
-  expect(document.querySelector("tbody tr")?.textContent).toContain("bob");
+  expect(query()).not.toHaveProperty("username");
+  expect(query()).toMatchObject({
+    sortBy: "date_created",
+    sortDirection: "desc",
+  });
   openFilter("Date Created");
   fireEvent.click(screen.getByRole("button", { name: "Sort Oldest" }));
-  expect(document.querySelector("tbody tr")?.textContent).toContain("alice");
+  expect(query().sortDirection).toBe("asc");
   closeFilter();
   fireEvent.click(
     screen.getByRole("button", { name: "Clear Date Created filter" })
   );
-  expect(
-    screen.queryByRole("button", { name: "Clear Date Created filter" })
-  ).toBeNull();
+  expect(query()).not.toHaveProperty("sortBy");
 });
 
 it("combines multiple choices within a column", () => {
   render(<Dashboard table="members" />);
   openFilter("Status");
   fireEvent.click(screen.getByRole("checkbox", { name: "active" }));
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
+  expect(query().status).toEqual(["active"]);
   fireEvent.click(screen.getByRole("checkbox", { name: "inactive" }));
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(2);
+  expect(query().status).toEqual(["active", "inactive"]);
   fireEvent.click(screen.getByRole("checkbox", { name: "active" }));
-  expect(document.querySelector("tbody")?.textContent).toContain("bob");
+  expect(query().status).toEqual(["inactive"]);
 });
 
 it.each([

@@ -2,26 +2,40 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { Ban, UserRoundCheck } from "lucide-react";
 import { toast } from "sonner";
-import { MembersTable } from "@/components/tables/MembersTable";
+import { MembersTable, memberColumns } from "@/components/tables/MembersTable";
+import { DashboardPagination } from "@/components/tables/DashboardPagination";
 import { Button } from "@/components/ui/button";
 import {
   fetchMembersTable,
   suspendUser,
   unsuspendUser,
 } from "@/lib/api/dashboard";
+import {
+  dashboardQuery,
+  parseDashboardSearch,
+  useDashboardSearch,
+  usePageSelection,
+} from "@/lib/dashboardFilters";
 
 export const Route = createFileRoute("/dashboard/members")({
-  loader: async ({ abortController }) => {
-    const data = await fetchMembersTable({ signal: abortController.signal });
-    return { data };
-  },
+  validateSearch: parseDashboardSearch,
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps, abortController }) =>
+    fetchMembersTable(dashboardQuery(memberColumns, deps), {
+      signal: abortController.signal,
+    }),
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const members = Route.useLoaderData();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const router = useRouter();
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { filters, updateFilters } = useDashboardSearch(search, (next) =>
+    navigate({ search: next, replace: true })
+  );
+  const [selectedIds, setSelectedIds] = usePageSelection(members);
   const [suspending, setSuspending] = useState(false); // used also for unsuspending
 
   const handleSuspend = async () => {
@@ -87,10 +101,19 @@ function RouteComponent() {
         <div className="overflow-x-auto">
           <MembersTable
             MemberData={members.data}
+            filters={filters}
+            onFiltersChange={updateFilters}
             selectedIds={selectedIds}
             setSelectedIds={setSelectedIds}
           />
         </div>
+        <DashboardPagination
+          page={search.page ?? 1}
+          total={members.total}
+          onPageChange={(page) =>
+            navigate({ search: (prev) => ({ ...prev, page }) })
+          }
+        />
       </section>
     </div>
   );
