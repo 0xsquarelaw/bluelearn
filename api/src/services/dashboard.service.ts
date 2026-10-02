@@ -120,14 +120,10 @@ export async function removeRole(supabase: DB, userId: string, role: UserRole) {
 }
 
 // fetch all statuses and map them to id data
-async function fetchStatuses(
-  supabase: DB,
-  ids: string[]
-): Promise<Map<string, string>> {
+async function fetchStatuses(supabase: DB): Promise<Map<string, string>> {
   const { data, error } = await supabase
     .from("user_statuses")
-    .select("user_id, status")
-    .in("user_id", ids);
+    .select("user_id, status");
 
   if (error) {
     console.error(error);
@@ -146,14 +142,8 @@ async function fetchStatuses(
 }
 
 // fetch all roles (site-wide) and map to id data
-async function fetchAllRoles(
-  supabase: DB,
-  ids: string[]
-): Promise<Map<string, string[]>> {
-  const { data, error } = await supabase
-    .from("user_roles")
-    .select("*")
-    .in("user_id", ids);
+async function fetchAllRoles(supabase: DB): Promise<Map<string, string[]>> {
+  const { data, error } = await supabase.from("user_roles").select("*");
 
   if (error) {
     console.error(error);
@@ -173,14 +163,10 @@ async function fetchAllRoles(
 }
 
 // return map of all usernames
-async function getUsernames(
-  supabase: DB,
-  ids: string[]
-): Promise<Map<string, string>> {
+async function getUsernames(supabase: DB): Promise<Map<string, string>> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username")
-    .in("id", ids);
+    .select("id, username");
 
   if (error) {
     console.error(error);
@@ -238,31 +224,15 @@ async function fetchAllAssignments(supabase: DB) {
   });
 }
 
-// fetch a list of all user ids for above global selection functions
-export async function getUserIds(supabase: DB) {
-  const { data, error } = await supabase.from("profiles").select("id");
-
-  if (error) {
-    console.error(error);
-    throw new ServiceError("Could not fetch user list.", 500);
-  }
-  if (!data) {
-    throw new ServiceError("Could not fetch user list.", 500);
-  }
-
-  return data.map((r) => {
-    return r.id;
-  });
-}
+// max_rows caps every select behind these tables at 1000 rows, so they need
+// pagination before the user count gets near that.
 
 // select all data from across different table for roles table
 export async function fetchRolesTable(supabase: DB) {
-  const ids = await getUserIds(supabase);
-
   const [profiles, statuses, roles] = await Promise.all([
     supabase.from("profiles").select("id, username, created_at, updated_at"),
-    fetchStatuses(supabase, ids),
-    fetchAllRoles(supabase, ids),
+    fetchStatuses(supabase),
+    fetchAllRoles(supabase),
   ]);
 
   // quick check for profiles errors
@@ -282,12 +252,11 @@ export async function fetchRolesTable(supabase: DB) {
 
 // fetch data for the members table
 export async function fetchMembersTable(supabase: DB) {
-  const ids = await getUserIds(supabase);
   const [profiles, statuses] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, username, display_name, created_at, updated_at, bio"),
-    fetchStatuses(supabase, ids),
+    fetchStatuses(supabase),
   ]);
 
   // quick check for profiles errors
@@ -308,10 +277,9 @@ export async function fetchMembersTable(supabase: DB) {
 
 // get assignments table
 export async function fetchAssignmentsTable(supabase: DB) {
-  const ids = await getUserIds(supabase);
   const [profiles, statuses, assignments] = await Promise.all([
-    getUsernames(supabase, ids),
-    fetchStatuses(supabase, ids),
+    getUsernames(supabase),
+    fetchStatuses(supabase),
     fetchAllAssignments(supabase),
   ]);
 
