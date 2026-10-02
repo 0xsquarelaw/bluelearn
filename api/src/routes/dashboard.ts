@@ -26,6 +26,9 @@ import {
   rolesTableResponseSchema,
   membersTableResponseSchema,
   assignmentsTableResponseSchema,
+  rolesTableQuerySchema,
+  membersTableQuerySchema,
+  assignmentsTableQuerySchema,
 } from "@bluelearn/schemas";
 
 export const dashboardRouter = new Hono<HonoEnv>()
@@ -122,9 +125,13 @@ export const dashboardRouter = new Hono<HonoEnv>()
       },
     }),
     requireUser,
+    validate("query", rolesTableQuerySchema),
     async (c) => {
-      const data = await fetchRolesTable(c.get("supabase"));
-      return c.json({ data }, 200);
+      const page = await fetchRolesTable(
+        c.get("supabase"),
+        c.req.valid("query")
+      );
+      return c.json(page, 200);
     }
   )
 
@@ -140,9 +147,13 @@ export const dashboardRouter = new Hono<HonoEnv>()
       },
     }),
     requireUser,
+    validate("query", membersTableQuerySchema),
     async (c) => {
-      const data = await fetchMembersTable(c.get("supabase"));
-      return c.json({ data }, 200);
+      const page = await fetchMembersTable(
+        c.get("supabase"),
+        c.req.valid("query")
+      );
+      return c.json(page, 200);
     }
   )
 
@@ -161,9 +172,13 @@ export const dashboardRouter = new Hono<HonoEnv>()
       },
     }),
     requireUser,
+    validate("query", assignmentsTableQuerySchema),
     async (c) => {
-      const data = await fetchAssignmentsTable(c.get("supabase"));
-      return c.json({ data }, 200);
+      const page = await fetchAssignmentsTable(
+        c.get("supabase"),
+        c.req.valid("query")
+      );
+      return c.json(page, 200);
     }
   )
 
