@@ -14,7 +14,7 @@ export type DashboardFilters = Record<
   string | Array<string> | undefined
 >;
 
-// Filters, sort and page live in the URL so the loader fetches the page on screen.
+// The route loader reads filters from the URL; local-only edits would not reload rows.
 export type DashboardSearch = {
   page?: number;
   [key: string]: string | Array<string> | number | undefined;
@@ -45,8 +45,7 @@ export function validHours(value: string) {
 
 const HOUR = 3600000;
 
-// Hours left from now. `before` is an exclusive upper bound, `through` an
-// inclusive one; a missing bound is open.
+// Presets exclude their upper bound; custom ranges include the selected maximum.
 type HoursLeft = { from?: number; before?: number; through?: number };
 
 const timeLeftPresets: Record<string, HoursLeft> = {
@@ -78,7 +77,6 @@ function hoursLeft(key: string, filters: DashboardFilters): HoursLeft | null {
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-// Local midnight at the start of a "YYYY-MM-DD" day, `offset` days later.
 function localDayStart(day: string, offset = 0) {
   const [year, month, date] = day.split("-").map(Number);
   return new Date(year, month - 1, date + offset);
@@ -92,7 +90,7 @@ function searchFilters(search: DashboardSearch): DashboardFilters {
   return filters;
 }
 
-// Drops empty filters and sorts keys, so equal filters compare equal as JSON.
+// URL equality uses JSON keys; normalize empty values and key order before comparison.
 function cleanFilters(filters: DashboardFilters): DashboardFilters {
   const clean: DashboardFilters = {};
   for (const key of Object.keys(filters).sort()) {
@@ -119,8 +117,7 @@ export function parseDashboardSearch(
   return search;
 }
 
-// Builds the API query for one table page. Calendar days and hours left
-// become instants here, in the browser's timezone.
+// Only the browser knows the user's timezone; send date filters to the API as instants.
 export function dashboardQuery(
   columns: ReadonlyArray<DashboardColumn>,
   search: DashboardSearch,
@@ -172,9 +169,7 @@ export function dashboardQuery(
   return query;
 }
 
-// Filter inputs change a local copy at once. The copy reaches the URL, and
-// so the loader, after a short pause: a typed search loads one page, not one
-// page per key.
+// Each URL update reloads the route; debounce typing to avoid a request per key.
 export function useDashboardSearch(
   search: DashboardSearch,
   commit: (filters: DashboardFilters) => void
@@ -187,7 +182,7 @@ export function useDashboardSearch(
   const latestCommit = useRef(commit);
   latestCommit.current = commit;
 
-  // Back, forward or a link changed the URL: show the filters it holds now.
+  // An echoed local commit must not overwrite newer typing; only external search changes replace filters.
   useEffect(() => {
     if (urlKey === committedKey.current) return;
     committedKey.current = urlKey;

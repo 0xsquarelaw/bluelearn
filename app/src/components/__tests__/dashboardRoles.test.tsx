@@ -39,7 +39,7 @@ const users = [
 
 vi.mock("sonner", () => ({ toast }));
 
-// The router hands back the same loader data until the page reloads.
+// Keep loader data stable across renders; a new object clears page selection.
 const page = { data: users, total: users.length };
 
 vi.mock("@tanstack/react-router", () => ({

@@ -8,7 +8,6 @@ import type { Database } from "../database.types";
 import type { ProfileActivityRow } from "./identity.service";
 import { ServiceError } from "../lib/service-error";
 
-// roles and status types
 export type UserStatus =
   Database["public"]["Tables"]["user_statuses"]["Row"]["status"];
 export type UserRole =
@@ -33,7 +32,6 @@ export type RoleRow = {
   status: string;
 };
 
-// fetch status for specific user
 export async function getUserStatus(supabase: DB, userId: string) {
   const { data, error } = await supabase
     .from("user_statuses")
@@ -52,7 +50,6 @@ export async function getUserStatus(supabase: DB, userId: string) {
   return data.status;
 }
 
-// set user status
 export async function markUserStatus(
   supabase: DB,
   userId: string,
@@ -71,7 +68,6 @@ export async function markUserStatus(
   return data;
 }
 
-// add role to user
 export async function addRole(supabase: DB, userId: string, role: UserRole) {
   const { error } = await supabase
     .from("user_roles")
@@ -83,7 +79,6 @@ export async function addRole(supabase: DB, userId: string, role: UserRole) {
   }
 }
 
-// remove role from user
 export async function removeRole(supabase: DB, userId: string, role: UserRole) {
   const { error } = await supabase
     .from("user_roles")
@@ -97,8 +92,6 @@ export async function removeRole(supabase: DB, userId: string, role: UserRole) {
   }
 }
 
-// How each dashboard table filter maps onto a column of its view. A `range`
-// filter reads `<key>_from` and `<key>_to` from the query.
 type FilterKind = "text" | "choice" | "roles" | "range";
 type TableColumns = Record<string, { column: string; kind: FilterKind }>;
 
@@ -147,7 +140,7 @@ type TableRequest<B> = PromiseLike<{
   range(from: number, to: number): B;
 };
 
-// Escape LIKE wildcards so a search matches the typed text literally.
+// Search inputs are literal text; % and _ must not widen member matches.
 function containsPattern(text: string) {
   return `%${text.replace(/[\\%_]/g, "\\$&")}%`;
 }
@@ -202,8 +195,7 @@ function filterTable<B extends TableRequest<B>>(
   return request;
 }
 
-// Filters, sorts and slices one page of a dashboard view. A page past the
-// end comes back empty, with the total the pagination needs to step back.
+// An out-of-range page still needs its filtered total so pagination can recover.
 async function fetchTablePage<B extends TableRequest<B>>(
   select: (options: { head: boolean }) => B,
   columns: TableColumns,
@@ -243,7 +235,6 @@ async function fetchTablePage<B extends TableRequest<B>>(
   return { rows: data as Awaited<B>["data"], total: count ?? 0 };
 }
 
-// select data for the roles table
 export async function fetchRolesTable(supabase: DB, query: RolesTableQuery) {
   const { rows, total } = await fetchTablePage(
     ({ head }) =>
@@ -271,7 +262,6 @@ export async function fetchRolesTable(supabase: DB, query: RolesTableQuery) {
   return { data, total };
 }
 
-// fetch data for the members table
 export async function fetchMembersTable(
   supabase: DB,
   query: MembersTableQuery
@@ -303,7 +293,6 @@ export async function fetchMembersTable(
   return { data, total };
 }
 
-// get assignments table
 export async function fetchAssignmentsTable(
   supabase: DB,
   query: AssignmentsTableQuery
@@ -337,17 +326,14 @@ export async function fetchAssignmentsTable(
   return { data, total };
 }
 
-// suspend a user
 export async function suspendUser(supabase: DB, userId: string) {
   await markUserStatus(supabase, userId, "suspended");
 }
 
-// unsuspend a user
 export async function unsuspendUser(supabase: DB, userId: string) {
   await markUserStatus(supabase, userId, "active");
 }
 
-// reassign a member of a panel
 export async function reassignPanelMember(
   supabase: DB,
   userId: string,

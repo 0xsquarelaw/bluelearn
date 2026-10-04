@@ -36,33 +36,33 @@ function RouteComponent() {
     navigate({ search: next, replace: true })
   );
   const [selectedIds, setSelectedIds] = usePageSelection(members);
-  const [suspending, setSuspending] = useState(false); // used also for unsuspending
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const handleSuspend = async () => {
-    setSuspending(true);
+    setUpdatingStatus(true);
     try {
       await Promise.all([...selectedIds].map((id) => suspendUser(id)));
-      setSelectedIds(new Set()); // reset selected ids after suspension
+      setSelectedIds(new Set());
       await router.invalidate();
       toast.info("Successfully suspended user(s)!");
     } catch (err) {
       toast.error("Could not suspend one or more users.");
     } finally {
-      setSuspending(false);
+      setUpdatingStatus(false);
     }
   };
 
   const handleUnsuspend = async () => {
-    setSuspending(true);
+    setUpdatingStatus(true);
     try {
       await Promise.all([...selectedIds].map((id) => unsuspendUser(id)));
-      setSelectedIds(new Set()); // reset selected ids after suspension
+      setSelectedIds(new Set());
       await router.invalidate();
       toast.info("Successfully unsuspended user(s)!");
     } catch (err) {
       toast.error("Could not unsuspend one or more users.");
     } finally {
-      setSuspending(false);
+      setUpdatingStatus(false);
     }
   };
 
@@ -78,7 +78,7 @@ function RouteComponent() {
         <div className="flex gap-2">
           <Button
             className="flex items-center justify-start"
-            disabled={selectedIds.size === 0 || suspending}
+            disabled={selectedIds.size === 0 || updatingStatus}
             onClick={handleUnsuspend}
           >
             <UserRoundCheck />
@@ -88,7 +88,7 @@ function RouteComponent() {
           <Button
             variant="destructive"
             className="flex items-center justify-start"
-            disabled={selectedIds.size === 0 || suspending}
+            disabled={selectedIds.size === 0 || updatingStatus}
             onClick={handleSuspend}
           >
             <Ban />

@@ -1,6 +1,4 @@
--- One row per member with their status and roles. The dashboard members and
--- roles tables page, filter and sort on these columns, and PostgREST cannot
--- filter or sort a top-level query by a column from another table.
+-- The dashboard needs member fields, status and roles in one pageable relation.
 create view public.dashboard_members with (security_invoker = on) as
 select
   p.id,
@@ -20,8 +18,7 @@ left join public.user_statuses us on us.user_id = p.id;
 
 grant select on public.dashboard_members to authenticated, service_role;
 
--- One row per assigned or completed review seat, flattened for the dashboard
--- assignments table for the same reason.
+-- Review-seat pages need assignee and revision fields in the same relation.
 create view public.dashboard_assignments with (security_invoker = on) as
 select
   pm.member_id,

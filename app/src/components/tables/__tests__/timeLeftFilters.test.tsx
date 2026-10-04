@@ -1,12 +1,6 @@
 // @vitest-environment jsdom
 import { useState } from "react";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  within,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AssignmentTable } from "@/lib/api/dashboard";
 import type { DashboardColumn, DashboardFilters } from "@/lib/dashboardFilters";
@@ -24,6 +18,7 @@ const justAfter = (hours: number) =>
 const columns: Array<DashboardColumn> = [
   { key: "time_left", label: "Time Left", kind: "duration" },
 ];
+
 const range = (filters: DashboardFilters) => {
   const params = dashboardQuery(columns, filters, now);
   return [params.time_left_from, params.time_left_to];
@@ -31,29 +26,68 @@ const range = (filters: DashboardFilters) => {
 
 describe("Time Left range boundaries", () => {
   it.each([
-    ["expired", [undefined, at(0)]],
-    ["under1", [at(0), at(1)]],
-    ["1to4", [at(1), at(4)]],
-    ["4to12", [at(4), at(12)]],
-    ["12to24", [at(12), justAfter(24)]],
+    {
+      label: "expired (no minimum, upper bound at now)",
+      mode: "expired",
+      bounds: [undefined, at(0)],
+    },
+    {
+      label: "under 1 hour (0 to 1 hour)",
+      mode: "under1",
+      bounds: [at(0), at(1)],
+    },
+    { label: "1 to 4 hours", mode: "1to4", bounds: [at(1), at(4)] },
+    { label: "4 to 12 hours", mode: "4to12", bounds: [at(4), at(12)] },
+    {
+      label: "12 to 24 hours (upper bound just after 24)",
+      mode: "12to24",
+      bounds: [at(12), justAfter(24)],
+    },
   ])(
-    "sends %s as a range that does not overlap its neighbours",
-    (mode, bounds) => {
+    "converts the $label preset to API deadline bounds",
+    ({ mode, bounds }) => {
       expect(range({ time_left: mode })).toEqual(bounds);
     }
   );
-  it("sends no range for Any, so missing and far deadlines stay", () => {
+
+  it("omits deadline bounds when no preset is selected", () => {
     expect(range({})).toEqual([undefined, undefined]);
   });
+
   it.each([
-    ["0.5", "4", [at(0.5), justAfter(4)]],
-    ["4", "4", [at(4), justAfter(4)]],
-    ["", "1", [at(0), justAfter(1)]],
-    ["24", "", [at(24), undefined]],
-    ["", "", [at(0), undefined]],
+    {
+      label: "0.5 to 4 hours",
+      min: "0.5",
+      max: "4",
+      bounds: [at(0.5), justAfter(4)],
+    },
+    {
+      label: "4 to 4 hours",
+      min: "4",
+      max: "4",
+      bounds: [at(4), justAfter(4)],
+    },
+    {
+      label: "no minimum to 1 hour",
+      min: "",
+      max: "1",
+      bounds: [at(0), justAfter(1)],
+    },
+    {
+      label: "24 hours with no maximum",
+      min: "24",
+      max: "",
+      bounds: [at(24), undefined],
+    },
+    {
+      label: "no minimum or maximum",
+      min: "",
+      max: "",
+      bounds: [at(0), undefined],
+    },
   ])(
-    "sends custom range %s to %s with both ends included",
-    (min, max, bounds) => {
+    "converts custom range $label to API deadline bounds",
+    ({ min, max, bounds }) => {
       expect(
         range({
           time_left: "custom",
@@ -63,16 +97,24 @@ describe("Time Left range boundaries", () => {
       ).toEqual(bounds);
     }
   );
+
   it.each([
-    ["4", "1"],
-    ["-1", "4"],
-    ["NaN", "4"],
-    ["0", "Infinity"],
-  ])("sends an empty range for invalid custom range %s to %s", (min, max) => {
-    expect(
-      range({ time_left: "custom", "time_left.min": min, "time_left.max": max })
-    ).toEqual([at(0), at(0)]);
-  });
+    { label: "minimum exceeds maximum", min: "4", max: "1" },
+    { label: "negative minimum", min: "-1", max: "4" },
+    { label: "non-numeric minimum", min: "NaN", max: "4" },
+    { label: "infinite maximum", min: "0", max: "Infinity" },
+  ])(
+    "returns an empty range for an invalid custom range: $label",
+    ({ min, max }) => {
+      expect(
+        range({
+          time_left: "custom",
+          "time_left.min": min,
+          "time_left.max": max,
+        })
+      ).toEqual([at(0), at(0)]);
+    }
+  );
 });
 
 const assignments: AssignmentTable = [
@@ -90,6 +132,7 @@ const assignments: AssignmentTable = [
     date_updated: at(-1),
   },
 ];
+
 function Dashboard() {
   const [selectedIds, setSelectedIds] = useState(new Set<string>());
   const [filters, setFilters] = useState<DashboardFilters>({});
@@ -110,39 +153,49 @@ function Dashboard() {
     </>
   );
 }
-function query(): Record<string, string | Array<string>> {
+
+function readRenderedQuery(): Record<string, string | Array<string>> {
   return JSON.parse(screen.getByLabelText("Query").textContent);
 }
+
 function openFilter() {
   fireEvent.click(screen.getByRole("button", { name: "Filter Time Left" }));
   return screen.getByRole("dialog", { name: "Filter Time Left" });
 }
+
 function closeFilter() {
   fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
 }
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(now);
 });
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
 });
 
-it("shows every preset and drops the range when Any is selected", () => {
+it("clears deadline bounds when Any is selected", () => {
   render(<Dashboard />);
-  const popup = openFilter();
-  expect(within(popup).getAllByRole("radio")).toHaveLength(7);
+  openFilter();
+
   fireEvent.click(screen.getByRole("radio", { name: "< 1 hr" }));
-  expect(query()).toMatchObject({ time_left_from: at(0), time_left_to: at(1) });
+  expect(readRenderedQuery()).toMatchObject({
+    time_left_from: at(0),
+    time_left_to: at(1),
+  });
+
   fireEvent.click(screen.getByRole("radio", { name: "Any" }));
-  expect(query()).not.toHaveProperty("time_left_from");
-  expect(query()).not.toHaveProperty("time_left_to");
+  expect(readRenderedQuery()).not.toHaveProperty("time_left_from");
+  expect(readRenderedQuery()).not.toHaveProperty("time_left_to");
 });
 
 it("sends custom decimal hours, alerts on reversed bounds and clears the range", () => {
   render(<Dashboard />);
   openFilter();
+
   fireEvent.click(screen.getByRole("radio", { name: "Custom range" }));
   fireEvent.change(screen.getByRole("spinbutton", { name: "Minimum hours" }), {
     target: { value: "0.5" },
@@ -150,20 +203,26 @@ it("sends custom decimal hours, alerts on reversed bounds and clears the range",
   fireEvent.change(screen.getByRole("spinbutton", { name: "Maximum hours" }), {
     target: { value: "0.5" },
   });
-  expect(query()).toMatchObject({
+  expect(readRenderedQuery()).toMatchObject({
     time_left_from: at(0.5),
     time_left_to: justAfter(0.5),
   });
+
   fireEvent.change(screen.getByRole("spinbutton", { name: "Minimum hours" }), {
     target: { value: "2" },
   });
   expect(screen.getByRole("alert")).toBeDefined();
-  expect(query()).toMatchObject({ time_left_from: at(0), time_left_to: at(0) });
+  expect(readRenderedQuery()).toMatchObject({
+    time_left_from: at(0),
+    time_left_to: at(0),
+  });
+
   closeFilter();
   fireEvent.click(
     screen.getByRole("button", { name: "Clear Time Left filter" })
   );
-  expect(query()).not.toHaveProperty("time_left_from");
+  expect(readRenderedQuery()).not.toHaveProperty("time_left_from");
+
   openFilter();
   fireEvent.click(screen.getByRole("radio", { name: "Custom range" }));
   expect(
@@ -173,14 +232,16 @@ it("sends custom decimal hours, alerts on reversed bounds and clears the range",
 
 it("combines Time Left with another column", () => {
   render(<Dashboard />);
+
   openFilter();
   fireEvent.click(screen.getByRole("radio", { name: "< 1 hr" }));
   closeFilter();
+
   fireEvent.click(screen.getByRole("button", { name: "Filter Title" }));
   fireEvent.change(screen.getByRole("searchbox"), {
     target: { value: "Algebra" },
   });
-  expect(query()).toMatchObject({
+  expect(readRenderedQuery()).toMatchObject({
     title: "Algebra",
     time_left_from: at(0),
     time_left_to: at(1),

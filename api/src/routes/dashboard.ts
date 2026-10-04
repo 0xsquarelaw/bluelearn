@@ -32,7 +32,6 @@ import {
 } from "@bluelearn/schemas";
 
 export const dashboardRouter = new Hono<HonoEnv>()
-  // Get user status (Active, Inactive, Suspended)
   .get(
     "/:id/status",
     describeRoute({
@@ -51,7 +50,6 @@ export const dashboardRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Change users status
   .patch(
     "/:id/status",
     describeRoute({
@@ -73,7 +71,6 @@ export const dashboardRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Add role to user
   .post(
     "/:id/role/:roleName",
     describeRoute({
@@ -93,7 +90,6 @@ export const dashboardRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Remove role from user
   .delete(
     "/:id/role/:roleName",
     describeRoute({
@@ -113,7 +109,6 @@ export const dashboardRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Fetch roles table
   .get(
     "/roles",
     describeRoute({
@@ -135,7 +130,6 @@ export const dashboardRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Fetch members table
   .get(
     "/members",
     describeRoute({
@@ -157,7 +151,6 @@ export const dashboardRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Fetch assignments table
   .get(
     "/assignments",
     describeRoute({
@@ -182,7 +175,6 @@ export const dashboardRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Suspend user
   .patch(
     "/:id/suspend",
     describeRoute({
@@ -202,7 +194,6 @@ export const dashboardRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Unsuspend user
   .patch(
     "/:id/unsuspend",
     describeRoute({
@@ -225,7 +216,6 @@ export const dashboardRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Reassign a panel member
   .patch(
     "/:id/reassign/:panel_id",
     describeRoute({

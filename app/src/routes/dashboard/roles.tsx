@@ -33,8 +33,7 @@ import {
   usePageSelection,
 } from "@/lib/dashboardFilters";
 
-// same enum as `:roleName`
-// so you can't offer a role the server rejects (hopefully)
+// Use the API enum so the role picker cannot offer an unsupported role.
 const ROLE_OPTIONS: ReadonlyArray<UserRole> = userRoleSchema.options;
 
 export const Route = createFileRoute("/dashboard/roles")({

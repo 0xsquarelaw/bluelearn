@@ -35,7 +35,7 @@ async function seedUsersUpTo(total: number) {
 
 // Each test names its members under a fresh prefix and searches by it, so
 // the rows other tests leave in the database never reach its pages.
-function newPrefix() {
+function uniqueUsernamePrefix() {
   return `dash-${crypto.randomUUID().slice(0, 8)}`;
 }
 
@@ -68,7 +68,7 @@ beforeAll(async () => {
 
 type Row = { username?: string; status?: string; roles?: string[] };
 
-async function getPage(
+async function requestTablePage(
   path: string,
   query: Record<string, string | Array<string>>,
   token = adminToken
@@ -77,8 +77,10 @@ async function getPage(
   for (const [key, value] of Object.entries(query)) {
     for (const item of [value].flat()) params.append(key, item);
   }
+
   const res = await app.request(`${path}?${params}`, auth(token), env);
   const body = (await res.json()) as { data: Array<Row>; total: number };
+
   return {
     status: res.status,
     total: body.total,
@@ -101,14 +103,23 @@ describe("dashboard tables", () => {
 });
 
 describe("GET /dashboard/members", () => {
-  it("pages through the members a search matches, and past the last page", async () => {
-    const prefix = newPrefix();
+  it("returns matching members across pages, including an empty page past the end", async () => {
+    const prefix = uniqueUsernamePrefix();
     for (const name of ["a", "b", "c"]) await createMember(`${prefix}-${name}`);
     const query = { username: prefix, sortBy: "username", limit: "2" };
 
-    const first = await getPage("/dashboard/members", { ...query, page: "1" });
-    const second = await getPage("/dashboard/members", { ...query, page: "2" });
-    const past = await getPage("/dashboard/members", { ...query, page: "3" });
+    const first = await requestTablePage("/dashboard/members", {
+      ...query,
+      page: "1",
+    });
+    const second = await requestTablePage("/dashboard/members", {
+      ...query,
+      page: "2",
+    });
+    const past = await requestTablePage("/dashboard/members", {
+      ...query,
+      page: "3",
+    });
 
     expect(first.names).toEqual([`${prefix}-a`, `${prefix}-b`]);
     expect(second.names).toEqual([`${prefix}-c`]);
@@ -117,35 +128,41 @@ describe("GET /dashboard/members", () => {
     expect([first.total, second.total, past.total]).toEqual([3, 3, 3]);
   });
 
-  it("matches members without a status through none, alone or with a status", async () => {
-    const prefix = newPrefix();
+  it("includes statusless members when none is selected", async () => {
+    const prefix = uniqueUsernamePrefix();
     await createMember(`${prefix}-active`);
     await setStatus(await createMember(`${prefix}-gone`), "suspended");
     await setStatus(await createMember(`${prefix}-none`), null);
-    const statuses = async (status: Array<string>) =>
+
+    const memberNamesByStatus = async (status: Array<string>) =>
       (
-        await getPage("/dashboard/members", {
+        await requestTablePage("/dashboard/members", {
           username: prefix,
           status,
           sortBy: "username",
         })
       ).names;
 
-    expect(await statuses(["none"])).toEqual([`${prefix}-none`]);
-    expect(await statuses(["suspended", "none"])).toEqual([
+    expect(await memberNamesByStatus(["none"])).toEqual([`${prefix}-none`]);
+    expect(await memberNamesByStatus(["suspended", "none"])).toEqual([
       `${prefix}-gone`,
       `${prefix}-none`,
     ]);
-    expect(await statuses(["active"])).toEqual([`${prefix}-active`]);
+    expect(await memberNamesByStatus(["active"])).toEqual([`${prefix}-active`]);
   });
 
   it("searches case-insensitively and treats LIKE wildcards as text", async () => {
-    const prefix = newPrefix();
+    const prefix = uniqueUsernamePrefix();
     await createMember(`${prefix}-x_y`);
     await createMember(`${prefix}-xay`);
+
     const search = async (username: string) =>
-      (await getPage("/dashboard/members", { username, sortBy: "username" }))
-        .names;
+      (
+        await requestTablePage("/dashboard/members", {
+          username,
+          sortBy: "username",
+        })
+      ).names;
 
     expect(await search(`${prefix}-x_y`)).toEqual([`${prefix}-x_y`]);
     expect(await search(`${prefix}-X`.toUpperCase())).toEqual([
@@ -155,16 +172,18 @@ describe("GET /dashboard/members", () => {
   });
 
   it("finds a member without a display name by the username shown instead", async () => {
-    const prefix = newPrefix();
+    const prefix = uniqueUsernamePrefix();
     await createMember(`${prefix}-plain`);
 
-    const page = await getPage("/dashboard/members", { display_name: prefix });
+    const page = await requestTablePage("/dashboard/members", {
+      display_name: prefix,
+    });
 
     expect(page.names).toEqual([`${prefix}-plain`]);
   });
 
   it("filters creation time with an inclusive start and an exclusive end", async () => {
-    const prefix = newPrefix();
+    const prefix = uniqueUsernamePrefix();
     const start = Date.parse("2020-01-01T00:00:00Z");
     const hours = [0, 1, 2];
     for (const hour of hours) {
@@ -176,7 +195,7 @@ describe("GET /dashboard/members", () => {
       if (error) throw error;
     }
 
-    const page = await getPage("/dashboard/members", {
+    const page = await requestTablePage("/dashboard/members", {
       username: prefix,
       date_created_from: new Date(start + 3600000).toISOString(),
       date_created_to: new Date(start + 2 * 3600000).toISOString(),
@@ -186,7 +205,7 @@ describe("GET /dashboard/members", () => {
   });
 
   it("shows a non-admin every member but only their own status", async () => {
-    const prefix = newPrefix();
+    const prefix = uniqueUsernamePrefix();
     await createMember(`${prefix}-other`);
     const plain = await makeUser();
     const { error } = await admin
@@ -195,7 +214,7 @@ describe("GET /dashboard/members", () => {
       .eq("id", plain.userId);
     if (error) throw error;
 
-    const page = await getPage(
+    const page = await requestTablePage(
       "/dashboard/members",
       { username: prefix, sortBy: "username" },
       plain.token
@@ -209,38 +228,39 @@ describe("GET /dashboard/members", () => {
 
   it.each([
     ["an unknown sort", { sortBy: "password" }],
-    ["a page larger than 100", { limit: "101" }],
+    ["a page size above the allowed limit", { limit: "101" }],
     ["an unknown status", { status: "banned" }],
     ["a date that is not an instant", { date_created_from: "yesterday" }],
   ])("refuses %s", async (_name, query) => {
-    const page = await getPage("/dashboard/members", query);
+    const page = await requestTablePage("/dashboard/members", query);
 
     expect(page.status).toBe(400);
   });
 });
 
 describe("GET /dashboard/roles", () => {
-  it("matches picked roles, and members without roles through none", async () => {
-    const prefix = newPrefix();
+  it("combines selected roles with members who have no roles", async () => {
+    const prefix = uniqueUsernamePrefix();
     await grantRole(await createMember(`${prefix}-a`), "curator");
     const both = await createMember(`${prefix}-b`);
     await grantRole(both, "curator");
     await grantRole(both, "verifier");
     await createMember(`${prefix}-c`);
-    const withRoles = async (roles: Array<string>) =>
+
+    const membersByRoles = async (roles: Array<string>) =>
       (
-        await getPage("/dashboard/roles", {
+        await requestTablePage("/dashboard/roles", {
           username: prefix,
           roles,
           sortBy: "username",
         })
       ).rows.map((row) => [row.username, row.roles]);
 
-    expect(await withRoles(["verifier"])).toEqual([
+    expect(await membersByRoles(["verifier"])).toEqual([
       [`${prefix}-b`, ["verifier", "curator"]],
     ]);
-    expect(await withRoles(["none"])).toEqual([[`${prefix}-c`, []]]);
-    expect(await withRoles(["verifier", "none"])).toEqual([
+    expect(await membersByRoles(["none"])).toEqual([[`${prefix}-c`, []]]);
+    expect(await membersByRoles(["verifier", "none"])).toEqual([
       [`${prefix}-b`, ["verifier", "curator"]],
       [`${prefix}-c`, []],
     ]);
@@ -249,7 +269,7 @@ describe("GET /dashboard/roles", () => {
 
 describe("GET /dashboard/assignments", () => {
   it("filters seats by time left and sorts seats without a deadline last", async () => {
-    const prefix = newPrefix();
+    const prefix = uniqueUsernamePrefix();
     const author = await createMember(`${prefix}-author`);
     const review = await createReviewCase(author);
     const panel = await createReviewPanel(review.id, { target_seat_count: 3 });
@@ -273,9 +293,14 @@ describe("GET /dashboard/assignments", () => {
         .eq("id", seat.id);
       if (error) throw error;
     }
+
     const seats = async (query: Record<string, string>) =>
-      (await getPage("/dashboard/assignments", { username: prefix, ...query }))
-        .names;
+      (
+        await requestTablePage("/dashboard/assignments", {
+          username: prefix,
+          ...query,
+        })
+      ).names;
 
     expect(await seats({ time_left_to: new Date(now).toISOString() })).toEqual([
       `${prefix}-late`,
