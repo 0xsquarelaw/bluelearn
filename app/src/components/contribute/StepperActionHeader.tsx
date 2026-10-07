@@ -19,6 +19,8 @@ type PropTypes = {
   hideBackBtn?: boolean;
   hideGuidelines?: boolean;
   submitting?: boolean;
+  isDirty?: boolean;
+  isSynced?: boolean;
   publishLabel?: string;
   guideCount?: number;
   onSaveDraft?: () => void | boolean | Promise<void | boolean>;
@@ -31,6 +33,7 @@ export const StepperActionHeader = ({
   type,
   nextDisabled,
   submitting,
+  isDirty,
   publishLabel = "Submit for Review",
   guideCount = 1,
   hideBackBtn,
@@ -98,7 +101,7 @@ export const StepperActionHeader = ({
             <button
               type="button"
               className="btn-pri disabled:pointer-events-none disabled:opacity-50"
-              disabled={submitting}
+              disabled={submitting || isDirty === false}
               onClick={handleSubmit}
             >
               {submitLabel}
@@ -146,7 +149,7 @@ export const StepperActionHeader = ({
               <button
                 type="button"
                 className="btn-pri inline-flex items-center px-3 whitespace-nowrap disabled:pointer-events-none disabled:opacity-50"
-                disabled={submitting}
+                disabled={submitting || isDirty === false}
                 onClick={handleSubmit}
               >
                 {publishLabel.toLowerCase().startsWith("submit")
