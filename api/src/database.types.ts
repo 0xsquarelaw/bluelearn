@@ -730,14 +730,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "learning_paths_created_by_fkey"
+            foreignKeyName: "objectives_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "dashboard_members"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "learning_paths_created_by_fkey"
+            foreignKeyName: "objectives_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"

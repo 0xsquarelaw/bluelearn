@@ -124,10 +124,12 @@ export const AssignmentsTable = ({
     const next = new Set(selectedIds);
 
     if (allSelected) {
+      // deselect every assignment currently displayed
       visibleRows.forEach((assignment) => {
         next.delete(getSelectionKey(assignment));
       });
     } else {
+      // select every assignment currently displayed
       visibleRows.forEach((assignment) => {
         next.add(getSelectionKey(assignment));
       });

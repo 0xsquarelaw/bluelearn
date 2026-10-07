@@ -25,6 +25,7 @@ export type AssignmentTable = InferResponseType<
   (typeof dashboard)["assignments"]["$get"]
 >["data"];
 
+// Get a user's current status
 export async function getUserStatus(id: string, { signal }: FetchOptions = {}) {
   const res = await dashboard[":id"].status.$get(
     { param: { id } },
@@ -37,6 +38,7 @@ export async function getUserStatus(id: string, { signal }: FetchOptions = {}) {
   return status;
 }
 
+// toggle user status between active and inactive
 export async function toggleAFK(
   id: string,
   status: UserStatus,
@@ -60,6 +62,7 @@ export async function toggleAFK(
   await assertOk(res);
 }
 
+// Change users status
 export async function setUserStatus(
   id: string,
   status: UserStatus,
@@ -79,6 +82,7 @@ export async function setUserStatus(
   return newStatus;
 }
 
+// Add role to a user
 export async function addRole(
   id: string,
   role: UserRole,
@@ -94,6 +98,7 @@ export async function addRole(
   await assertOk(res);
 }
 
+// Remove role from a user
 export async function removeRole(
   id: string,
   role: UserRole,
@@ -109,6 +114,7 @@ export async function removeRole(
   await assertOk(res);
 }
 
+// List one page of role data for users
 export async function fetchRoleTable(
   query: TableQuery,
   { signal }: FetchOptions = {}
@@ -119,6 +125,7 @@ export async function fetchRoleTable(
   return res.json();
 }
 
+// List one page of member/profile data
 export async function fetchMembersTable(
   query: TableQuery,
   { signal }: FetchOptions = {}
@@ -129,6 +136,7 @@ export async function fetchMembersTable(
   return res.json();
 }
 
+// Get one page of data for the assignments table
 export async function fetchAssignmentsTable(
   query: TableQuery,
   { signal }: FetchOptions = {}
@@ -139,6 +147,7 @@ export async function fetchAssignmentsTable(
   return res.json();
 }
 
+// Mark user as suspended
 export async function suspendUser(id: string, { signal }: FetchOptions = {}) {
   const res = await dashboard[":id"].suspend.$patch(
     { param: { id } },
@@ -148,6 +157,7 @@ export async function suspendUser(id: string, { signal }: FetchOptions = {}) {
   await assertOk(res);
 }
 
+// Mark user as unsuspended
 export async function unsuspendUser(id: string, { signal }: FetchOptions = {}) {
   const res = await dashboard[":id"].unsuspend.$patch(
     { param: { id } },
@@ -157,6 +167,7 @@ export async function unsuspendUser(id: string, { signal }: FetchOptions = {}) {
   await assertOk(res);
 }
 
+// Reassign a panel member
 export async function reassignPanelMember(
   id: string,
   panel_id: string,

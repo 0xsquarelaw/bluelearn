@@ -36,13 +36,13 @@ function RouteComponent() {
     navigate({ search: next, replace: true })
   );
   const [selectedIds, setSelectedIds] = usePageSelection(members);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false); // used for suspending and unsuspending
 
   const handleSuspend = async () => {
     setUpdatingStatus(true);
     try {
       await Promise.all([...selectedIds].map((id) => suspendUser(id)));
-      setSelectedIds(new Set());
+      setSelectedIds(new Set()); // reset selected ids after suspension
       await router.invalidate();
       toast.info("Successfully suspended user(s)!");
     } catch (err) {
@@ -56,7 +56,7 @@ function RouteComponent() {
     setUpdatingStatus(true);
     try {
       await Promise.all([...selectedIds].map((id) => unsuspendUser(id)));
-      setSelectedIds(new Set());
+      setSelectedIds(new Set()); // reset selected ids after unsuspension
       await router.invalidate();
       toast.info("Successfully unsuspended user(s)!");
     } catch (err) {

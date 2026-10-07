@@ -8,6 +8,7 @@ import type { Database } from "../database.types";
 import type { ProfileActivityRow } from "./identity.service";
 import { ServiceError } from "../lib/service-error";
 
+// roles and status types
 export type UserStatus =
   Database["public"]["Tables"]["user_statuses"]["Row"]["status"];
 export type UserRole =
@@ -32,6 +33,7 @@ export type RoleRow = {
   status: string;
 };
 
+// fetch status for specific user
 export async function getUserStatus(supabase: DB, userId: string) {
   const { data, error } = await supabase
     .from("user_statuses")
@@ -50,6 +52,7 @@ export async function getUserStatus(supabase: DB, userId: string) {
   return data.status;
 }
 
+// set user status
 export async function markUserStatus(
   supabase: DB,
   userId: string,
@@ -68,6 +71,7 @@ export async function markUserStatus(
   return data;
 }
 
+// add role to user
 export async function addRole(supabase: DB, userId: string, role: UserRole) {
   const { error } = await supabase
     .from("user_roles")
@@ -79,6 +83,7 @@ export async function addRole(supabase: DB, userId: string, role: UserRole) {
   }
 }
 
+// remove role from user
 export async function removeRole(supabase: DB, userId: string, role: UserRole) {
   const { error } = await supabase
     .from("user_roles")
@@ -235,6 +240,7 @@ async function fetchTablePage<B extends TableRequest<B>>(
   return { rows: data as Awaited<B>["data"], total: count ?? 0 };
 }
 
+// select one page of data from the dashboard view for the roles table
 export async function fetchRolesTable(supabase: DB, query: RolesTableQuery) {
   const { rows, total } = await fetchTablePage(
     ({ head }) =>
@@ -262,6 +268,7 @@ export async function fetchRolesTable(supabase: DB, query: RolesTableQuery) {
   return { data, total };
 }
 
+// fetch one page of data for the members table
 export async function fetchMembersTable(
   supabase: DB,
   query: MembersTableQuery
@@ -293,6 +300,7 @@ export async function fetchMembersTable(
   return { data, total };
 }
 
+// get one page of the assignments table
 export async function fetchAssignmentsTable(
   supabase: DB,
   query: AssignmentsTableQuery
@@ -326,14 +334,17 @@ export async function fetchAssignmentsTable(
   return { data, total };
 }
 
+// suspend a user
 export async function suspendUser(supabase: DB, userId: string) {
   await markUserStatus(supabase, userId, "suspended");
 }
 
+// unsuspend a user
 export async function unsuspendUser(supabase: DB, userId: string) {
   await markUserStatus(supabase, userId, "active");
 }
 
+// reassign a member of a panel
 export async function reassignPanelMember(
   supabase: DB,
   userId: string,

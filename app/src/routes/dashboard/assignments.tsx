@@ -97,6 +97,7 @@ function RouteComponent() {
 
       <section className="space-y-3">
         <div className="overflow-x-auto">
+          {/* AssignmentsTable */}
           <AssignmentsTable
             assignmentsData={assignments.data}
             filters={filters}

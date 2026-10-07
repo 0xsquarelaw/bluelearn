@@ -1,4 +1,5 @@
--- The dashboard needs member fields, status and roles in one pageable relation.
+-- Keep member fields, status and roles together so PostgREST can filter and sort
+-- the member rows before pagination.
 create view public.dashboard_members with (security_invoker = on) as
 select
   p.id,
@@ -18,7 +19,7 @@ left join public.user_statuses us on us.user_id = p.id;
 
 grant select on public.dashboard_members to authenticated, service_role;
 
--- Review-seat pages need assignee and revision fields in the same relation.
+-- Keep assignee and revision fields together for the same filtering and sorting.
 create view public.dashboard_assignments with (security_invoker = on) as
 select
   pm.member_id,
