@@ -149,7 +149,7 @@ export const StepperActionHeader = ({
               <button
                 type="button"
                 className="btn-pri inline-flex items-center px-3 whitespace-nowrap disabled:pointer-events-none disabled:opacity-50"
-                disabled={submitting || isDirty === false}
+                disabled={submitting || isDirty === false} // action
                 onClick={handleSubmit}
               >
                 {publishLabel.toLowerCase().startsWith("submit")
