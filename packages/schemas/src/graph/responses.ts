@@ -17,7 +17,7 @@ export const todoListItemSchema = z.object({
 
 export const todoSchema = z.object({
   id: z.uuid(),
-  guide_base_id: z.uuid(),
+  guide_base_id: z.uuid().nullable(),
   title: z.string(),
   summary: z.string(),
   status: todoStatusSchema,

@@ -103,7 +103,10 @@ export const OrderObjectiveGuides = ({
     if (!targetGuideSlug) return;
 
     const controller = new AbortController();
-    getGuideWalkthrough(targetGuideSlug, { signal: controller.signal })
+    getGuideWalkthrough(targetGuideSlug, {
+      signal: controller.signal,
+      followUpDepth: 0,
+    })
       .then((data) => {
         setFetched({
           slug: targetGuideSlug,
