@@ -100,8 +100,6 @@ describe("PATCH /objective-revisions/{id} curation", () => {
     }>;
   };
 
-  // A draft whose guides were placed by a graph save; the targets are derived
-  // from it, and curation names them by node id.
   async function drawnDraft(
     bases: string[],
     edges: Array<[number, number]> = []
@@ -145,7 +143,19 @@ describe("PATCH /objective-revisions/{id} curation", () => {
     const nodeIdOf = async (baseId: string) =>
       (await read()).byBase.get(baseId)!.id;
 
-    return { curate, read, nodeIdOf };
+    const redraw = (basesToKeep: string[]) =>
+      app.request(
+        `/objective-revisions/${revision.id}`,
+        jsonAuth(curator.token, "PATCH", {
+          graph: {
+            nodes: nodes.filter((n) => basesToKeep.includes(n.guide_base_id)),
+            edges: [],
+          },
+        }),
+        env
+      );
+
+    return { curate, read, nodeIdOf, redraw };
   }
 
   it("orders the targets and records the sequence", async () => {
@@ -253,6 +263,95 @@ describe("PATCH /objective-revisions/{id} curation", () => {
     expect(byBase.get(goal.base.id)).toEqual(
       expect.objectContaining({ is_target: true, target_position: 0 })
     );
+  });
+
+  it("clears every target on an empty graph and derives one again", async () => {
+    const prereq = await createPublishedGuide();
+    const goal = await createPublishedGuide();
+    await createPrerequisite(prereq.base.id, goal.base.id);
+    const bases = [prereq.base.id, goal.base.id];
+    const { curate, read, nodeIdOf, redraw } = await drawnDraft(bases);
+    const goalNode = await nodeIdOf(goal.base.id);
+
+    expect((await curate([{ node_id: goalNode }])).status).toBe(200);
+    expect((await redraw([])).status).toBe(200);
+    expect((await read()).snapshot.nodes).toEqual([]);
+
+    expect((await redraw(bases)).status).toBe(200);
+    const restoredGoal = await nodeIdOf(goal.base.id);
+    expect((await curate([{ node_id: restoredGoal }])).status).toBe(200);
+    expect((await read()).snapshot.nodes.filter((n) => n.is_target)).toEqual([
+      expect.objectContaining({
+        id: restoredGoal,
+        guide_base_id: goal.base.id,
+        is_featured: true,
+        target_position: 0,
+      }),
+    ]);
+  });
+
+  describe("stale sequence rows", () => {
+    it("drops every order row when the graph empties", async () => {
+      const prereq = await createPublishedGuide();
+      const goal = await createPublishedGuide();
+      await createPrerequisite(prereq.base.id, goal.base.id);
+      const { curate, read, nodeIdOf, redraw } = await drawnDraft([
+        prereq.base.id,
+        goal.base.id,
+      ]);
+      const prereqNode = await nodeIdOf(prereq.base.id);
+      const goalNode = await nodeIdOf(goal.base.id);
+
+      expect(
+        (await curate([{ node_id: goalNode, sequence: [prereqNode] }])).status
+      ).toBe(200);
+      expect((await read()).snapshot.orders).toEqual([
+        { target_node_id: goalNode, node_id: prereqNode, position: 0 },
+      ]);
+
+      expect((await redraw([])).status).toBe(200);
+      expect((await read()).snapshot.orders).toEqual([]);
+    });
+
+    it("drops a removed target's rows and keeps the retained target's", async () => {
+      const prereqA = await createPublishedGuide();
+      const a = await createPublishedGuide();
+      const prereqB = await createPublishedGuide();
+      const b = await createPublishedGuide();
+      await createPrerequisite(prereqA.base.id, a.base.id);
+      await createPrerequisite(prereqB.base.id, b.base.id);
+      const { curate, read, nodeIdOf, redraw } = await drawnDraft([
+        prereqA.base.id,
+        a.base.id,
+        prereqB.base.id,
+        b.base.id,
+      ]);
+      const aNode = await nodeIdOf(a.base.id);
+      const bNode = await nodeIdOf(b.base.id);
+      const prereqANode = await nodeIdOf(prereqA.base.id);
+      const prereqBNode = await nodeIdOf(prereqB.base.id);
+
+      expect(
+        (
+          await curate([
+            { node_id: aNode, sequence: [prereqANode] },
+            { node_id: bNode, sequence: [prereqBNode] },
+          ])
+        ).status
+      ).toBe(200);
+      expect((await read()).snapshot.orders).toEqual(
+        expect.arrayContaining([
+          { target_node_id: aNode, node_id: prereqANode, position: 0 },
+          { target_node_id: bNode, node_id: prereqBNode, position: 0 },
+        ])
+      );
+
+      expect((await redraw([prereqA.base.id, a.base.id])).status).toBe(200);
+      expect((await curate([{ node_id: aNode }])).status).toBe(200);
+      expect((await read()).snapshot.orders).toEqual([
+        { target_node_id: aNode, node_id: prereqANode, position: 0 },
+      ]);
+    });
   });
 
   it("403s for a non-curator author", async () => {
