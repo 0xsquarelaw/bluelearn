@@ -26,6 +26,7 @@ import { ObjectiveDetails } from "@/components/contribute/steps/objective/Object
 import { OrderObjectiveGuides } from "@/components/contribute/steps/objective/OrderObjectiveGuides";
 import { OrderTargetGuides } from "@/components/contribute/steps/objective/OrderTargetGuides";
 import { PreviewObjective } from "@/components/contribute/steps/objective/PreviewObjective";
+import { GuideRequestDetails } from "@/components/contribute/steps/GuideRequestDetails";
 
 import {
   addGuideVariant,
@@ -1556,6 +1557,8 @@ function Inner({
           guideOptions={guideOptions}
           subjectOptions={subjectOptions}
         />
+
+        <GuideRequestDetails Stepper={Stepper} onSubmitted={onPublished} />
       </div>
     </div>
   );
