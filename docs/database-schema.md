@@ -267,6 +267,7 @@ Rows contain the selected prerequisites. The displayed sequence adds its target 
 
 An empty saved sequence is a curator choice. Reopening the draft preserves that choice.
 The editor uses canvas prerequisites while a guide walkthrough loads. A failed walkthrough request does not change saved choices.
+Removing a target from the graph removes its saved sequence. Sequences for the remaining targets do not change.
 
 - `revision_id`: FK to `objective_revisions`.
 - `target_node_id`: the target node whose sequence this row belongs to (FK to `objective_revision_nodes`).

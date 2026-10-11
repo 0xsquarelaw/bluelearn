@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import app from "../src/index";
-import { admin, auth, env, jsonAuth, makeUser } from "./helpers";
+import { auth, env, jsonAuth, makeUser } from "./helpers";
 import { grantRole } from "./factories/identity";
 import { createPublishedGuide } from "./factories/guides";
 import { createPrerequisite } from "./factories/graph";
@@ -143,7 +143,19 @@ describe("PATCH /objective-revisions/{id} curation", () => {
     const nodeIdOf = async (baseId: string) =>
       (await read()).byBase.get(baseId)!.id;
 
-    return { curate, read, nodeIdOf };
+    const redraw = (basesToKeep: string[]) =>
+      app.request(
+        `/objective-revisions/${revision.id}`,
+        jsonAuth(curator.token, "PATCH", {
+          graph: {
+            nodes: nodes.filter((n) => basesToKeep.includes(n.guide_base_id)),
+            edges: [],
+          },
+        }),
+        env
+      );
+
+    return { curate, read, nodeIdOf, redraw };
   }
 
   it("orders the targets and records the sequence", async () => {
@@ -253,50 +265,25 @@ describe("PATCH /objective-revisions/{id} curation", () => {
     );
   });
 
-  it("clears every target on an empty target set, and flags one again", async () => {
-    const { curator, revision } = await curatorDraft();
+  it("clears every target on an empty graph and derives one again", async () => {
     const prereq = await createPublishedGuide();
     const goal = await createPublishedGuide();
     await createPrerequisite(prereq.base.id, goal.base.id);
+    const bases = [prereq.base.id, goal.base.id];
+    const { curate, read, nodeIdOf, redraw } = await drawnDraft(bases);
+    const goalNode = await nodeIdOf(goal.base.id);
 
-    const patch = async (targets: unknown) => {
-      const res = await app.request(
-        `/objective-revisions/${revision.id}`,
-        jsonAuth(curator.token, "PATCH", { targets }),
-        env
-      );
-      expect(res.status).toBe(200);
-    };
-    const readTargets = async () => {
-      const res = await app.request(
-        `/objective-revisions/${revision.id}`,
-        auth(curator.token),
-        env
-      );
-      const { snapshot } = (await res.json()) as {
-        snapshot: {
-          nodes: Array<{
-            guide_base_id: string;
-            is_target: boolean;
-            is_featured: boolean;
-            target_position: number | null;
-          }>;
-        };
-      };
-      return snapshot.nodes.filter(
-        (n) => n.is_target || n.is_featured || n.target_position !== null
-      );
-    };
+    expect((await curate([{ node_id: goalNode }])).status).toBe(200);
+    expect((await redraw([])).status).toBe(200);
+    expect((await read()).snapshot.nodes).toEqual([]);
 
-    await patch([{ guide_base_id: goal.base.id, is_featured: true }]);
-    await patch([]);
-    expect(await readTargets()).toEqual([]);
-
-    await patch([{ guide_base_id: goal.base.id }]);
-    expect(await readTargets()).toEqual([
+    expect((await redraw(bases)).status).toBe(200);
+    const restoredGoal = await nodeIdOf(goal.base.id);
+    expect((await curate([{ node_id: restoredGoal }])).status).toBe(200);
+    expect((await read()).snapshot.nodes.filter((n) => n.is_target)).toEqual([
       expect.objectContaining({
+        id: restoredGoal,
         guide_base_id: goal.base.id,
-        is_target: true,
         is_featured: true,
         target_position: 0,
       }),
@@ -304,87 +291,66 @@ describe("PATCH /objective-revisions/{id} curation", () => {
   });
 
   describe("stale sequence rows", () => {
-    const setup = async () => {
-      const { curator, revision } = await curatorDraft();
-      const patch = async (targets: unknown) => {
-        const res = await app.request(
-          `/objective-revisions/${revision.id}`,
-          jsonAuth(curator.token, "PATCH", { targets }),
-          env
-        );
-        expect(res.status).toBe(200);
-      };
-      const nodeIdOf = async (baseId: string) => {
-        const { data, error } = await admin
-          .from("objective_revision_nodes")
-          .select("id")
-          .eq("revision_id", revision.id)
-          .eq("guide_base_id", baseId)
-          .single();
-        if (error) throw error;
-        return data.id;
-      };
-      const orderRows = async () => {
-        const { data, error } = await admin
-          .from("objective_revision_node_orders")
-          .select("target_node_id, node_id, position")
-          .eq("revision_id", revision.id)
-          .order("target_node_id")
-          .order("position");
-        if (error) throw error;
-        return data;
-      };
-      return { patch, nodeIdOf, orderRows };
-    };
-
-    it("drops every order row when the target set empties", async () => {
-      const { patch, nodeIdOf, orderRows } = await setup();
+    it("drops every order row when the graph empties", async () => {
       const prereq = await createPublishedGuide();
       const goal = await createPublishedGuide();
       await createPrerequisite(prereq.base.id, goal.base.id);
-
-      await patch([
-        {
-          guide_base_id: goal.base.id,
-          sequence: [prereq.base.id, goal.base.id],
-        },
+      const { curate, read, nodeIdOf, redraw } = await drawnDraft([
+        prereq.base.id,
+        goal.base.id,
       ]);
+      const prereqNode = await nodeIdOf(prereq.base.id);
       const goalNode = await nodeIdOf(goal.base.id);
-      expect((await orderRows()).map((r) => r.target_node_id)).toContain(
-        goalNode
-      );
 
-      await patch([]);
-      expect(await orderRows()).toEqual([]);
+      expect(
+        (await curate([{ node_id: goalNode, sequence: [prereqNode] }])).status
+      ).toBe(200);
+      expect((await read()).snapshot.orders).toEqual([
+        { target_node_id: goalNode, node_id: prereqNode, position: 0 },
+      ]);
+
+      expect((await redraw([])).status).toBe(200);
+      expect((await read()).snapshot.orders).toEqual([]);
     });
 
-    it("drops a former target's rows and keeps the unsequenced target's", async () => {
-      const { patch, nodeIdOf, orderRows } = await setup();
+    it("drops a removed target's rows and keeps the retained target's", async () => {
       const prereqA = await createPublishedGuide();
       const a = await createPublishedGuide();
       const prereqB = await createPublishedGuide();
       const b = await createPublishedGuide();
       await createPrerequisite(prereqA.base.id, a.base.id);
       await createPrerequisite(prereqB.base.id, b.base.id);
-
-      await patch([
-        { guide_base_id: a.base.id, sequence: [prereqA.base.id, a.base.id] },
-        { guide_base_id: b.base.id, sequence: [prereqB.base.id, b.base.id] },
+      const { curate, read, nodeIdOf, redraw } = await drawnDraft([
+        prereqA.base.id,
+        a.base.id,
+        prereqB.base.id,
+        b.base.id,
       ]);
       const aNode = await nodeIdOf(a.base.id);
       const bNode = await nodeIdOf(b.base.id);
-      const before = await orderRows();
-      const aRows = before.filter((r) => r.target_node_id === aNode);
-      expect(aRows.map((r) => r.node_id)).toEqual([
-        await nodeIdOf(prereqA.base.id),
-        aNode,
-      ]);
-      expect(before.map((r) => r.target_node_id)).toContain(bNode);
+      const prereqANode = await nodeIdOf(prereqA.base.id);
+      const prereqBNode = await nodeIdOf(prereqB.base.id);
 
-      await patch([{ guide_base_id: a.base.id }]);
-      const after = await orderRows();
-      expect(after.filter((r) => r.target_node_id === bNode)).toEqual([]);
-      expect(after.filter((r) => r.target_node_id === aNode)).toEqual(aRows);
+      expect(
+        (
+          await curate([
+            { node_id: aNode, sequence: [prereqANode] },
+            { node_id: bNode, sequence: [prereqBNode] },
+          ])
+        ).status
+      ).toBe(200);
+      expect((await read()).snapshot.orders).toEqual(
+        expect.arrayContaining([
+          { target_node_id: aNode, node_id: prereqANode, position: 0 },
+          { target_node_id: bNode, node_id: prereqBNode, position: 0 },
+        ])
+      );
+
+      expect((await redraw([prereqA.base.id, a.base.id])).status).toBe(200);
+      expect((await curate([{ node_id: aNode }])).status).toBe(200);
+      expect((await read()).snapshot.orders).toEqual([
+        { target_node_id: aNode, node_id: prereqANode, position: 0 },
+      ]);
     });
   });
 
