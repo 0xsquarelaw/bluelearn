@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { PanelLeftOpen } from "lucide-react";
 import type {
   GuideListItem,
   Objective,
@@ -99,26 +100,38 @@ export function ObjectiveGraph({
   }
 
   const selected = nodes.get(selectedNode.id)!;
-  // A click on the open node closes the panel again.
-  const showPanel = selectedId !== null;
-  const onNodeClick = (id: string) => onSelect(id === selectedId ? null : id);
+  // Closed, the panel folds into a rail; the rail opens on the default node.
+  const isOpen = selectedId !== null;
 
   return (
     <div
       className={
-        showPanel
+        isOpen
           ? "flex flex-col-reverse md:grid md:grid-cols-[320px_1fr]"
-          : "flex flex-col"
+          : "flex flex-col-reverse md:grid md:grid-cols-[48px_1fr]"
       }
     >
-      {showPanel && (
+      {isOpen ? (
         <WalkthroughPanel
           node={selectedNode}
           objective={objective}
           guideSlug={selected.guideSlug}
           isRequest={selected.isRequest}
           preview={preview}
+          onClose={() => onSelect(null)}
         />
+      ) : (
+        <div className="flex items-center justify-center border-t py-2 md:h-full md:items-start md:border-t-0 md:border-r md:py-4">
+          <button
+            type="button"
+            onClick={() => onSelect(selectedNode.id)}
+            aria-label="Open panel"
+            title="Open panel"
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <PanelLeftOpen className="h-4 w-4" />
+          </button>
+        </div>
       )}
       <div
         className={
@@ -135,7 +148,7 @@ export function ObjectiveGraph({
           nodeType="walkthroughNode"
           nodeTypes={nodeTypes}
           getNodeState={getNodeState}
-          onNodeClick={onNodeClick}
+          onNodeClick={onSelect}
           isFullscreen={isFullscreen}
           onToggleFullscreen={() => setIsFullscreen((value) => !value)}
           showFitView={false}

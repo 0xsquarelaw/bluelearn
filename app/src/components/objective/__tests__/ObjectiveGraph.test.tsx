@@ -135,27 +135,29 @@ describe("ObjectiveGraph", () => {
     cleanup();
   });
 
-  it("highlights the target request and keeps the panel closed until a click", () => {
+  it("starts folded into a rail and opens on the target from the rail", () => {
     render(<Graph snapshot={snapshot} />);
 
     expect(panel()).toBeNull();
     expect(highlighted("Termination proofs")).toBe("true");
 
-    fireEvent.click(screen.getByRole("button", { name: "Termination proofs" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open panel" }));
     expect(
       screen.getByRole("heading", { name: "Termination proofs" })
     ).toBeTruthy();
     expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 
-  it("closes the panel on a second click of the open node", () => {
+  it("opens on a node click and folds back on Close panel", () => {
     render(<Graph snapshot={snapshot} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Loops" }));
-    expect(panel()).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Loops" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Open panel" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Loops" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close panel" }));
     expect(panel()).toBeNull();
+    expect(screen.getByRole("button", { name: "Open panel" })).toBeTruthy();
     expect(highlighted("Termination proofs")).toBe("true");
   });
 
