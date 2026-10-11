@@ -1,13 +1,19 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type {
   ObjectiveSnapshot,
   ObjectiveSnapshotNode,
   Walkthrough,
 } from "@bluelearn/schemas";
-import { ObjectiveGraph } from "@/components/objective/ObjectiveGraph";
+import {
+  ObjectiveGraph,
+  useObjectiveSelection,
+} from "@/components/objective/ObjectiveGraph";
+import ObjectiveFlow from "@/components/objective/ObjectiveFlow";
+import { buildObjectiveFlow } from "@/lib/objectiveSnapshot";
 import { WalkthroughPanel } from "@/components/graph/WalkthroughPanel";
 
 // Keep link destinations visible without mounting the application router.
@@ -21,6 +27,10 @@ vi.mock("@tanstack/react-router", () => ({
     to: string;
     params?: { slug: string };
   }) => <a href={params ? to.replace("$slug", params.slug) : to}>{children}</a>,
+}));
+
+vi.mock("@/routes/guides/$slug/index", () => ({
+  Route: { to: "/guides/$slug" },
 }));
 
 // xyflow needs real layout; one button per node keeps clicks and fullscreen
@@ -90,15 +100,34 @@ const objective = { slug: "proofs", title: "Proofs" };
 
 const openGuide = () => screen.queryByRole("link", { name: "Open Guide" });
 
+function Graph({
+  snapshot: graphSnapshot,
+  preview,
+}: {
+  snapshot: ObjectiveSnapshot;
+  preview?: boolean;
+}) {
+  const selection = useObjectiveSelection(graphSnapshot);
+
+  return (
+    <ObjectiveGraph
+      objective={objective}
+      snapshot={graphSnapshot}
+      guides={[]}
+      selectedId={selection.selectedId}
+      onSelect={selection.select}
+      preview={preview}
+    />
+  );
+}
+
 describe("ObjectiveGraph", () => {
   afterEach(() => {
     cleanup();
   });
 
   it("opens on the target request with no link anywhere in the panel", () => {
-    render(
-      <ObjectiveGraph objective={objective} snapshot={snapshot} guides={[]} />
-    );
+    render(<Graph snapshot={snapshot} />);
 
     expect(
       screen.getByRole("heading", { name: "Termination proofs" })
@@ -107,9 +136,7 @@ describe("ObjectiveGraph", () => {
   });
 
   it("offers the guide's own page for a guide and takes it away for a request", () => {
-    render(
-      <ObjectiveGraph objective={objective} snapshot={snapshot} guides={[]} />
-    );
+    render(<Graph snapshot={snapshot} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Loops" }));
     expect(openGuide()?.getAttribute("href")).toBe("/guides/loops");
@@ -123,14 +150,7 @@ describe("ObjectiveGraph", () => {
   });
 
   it("links nowhere in a preview, even for a guide", () => {
-    render(
-      <ObjectiveGraph
-        objective={objective}
-        snapshot={snapshot}
-        guides={[]}
-        preview
-      />
-    );
+    render(<Graph snapshot={snapshot} preview />);
 
     fireEvent.click(screen.getByRole("button", { name: "Loops" }));
     expect(screen.getByRole("heading", { name: "Loops" })).toBeTruthy();
@@ -138,9 +158,7 @@ describe("ObjectiveGraph", () => {
   });
 
   it("leaves fullscreen on Escape", () => {
-    render(
-      <ObjectiveGraph objective={objective} snapshot={snapshot} guides={[]} />
-    );
+    render(<Graph snapshot={snapshot} />);
     const graph = screen.getByTestId("graph");
 
     fireEvent.click(screen.getByRole("button", { name: "Toggle fullscreen" }));
@@ -148,6 +166,112 @@ describe("ObjectiveGraph", () => {
 
     fireEvent.keyDown(window, { key: "Escape" });
     expect(graph.getAttribute("data-fullscreen")).toBe("false");
+  });
+});
+
+describe("an objective's graph and linear views", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  const twoTargets: ObjectiveSnapshot = {
+    nodes: [
+      node("basics", {
+        guide_base_id: "base-basics",
+        slug: "basics",
+        title: "Basics",
+      }),
+      node("tools", {
+        guide_base_id: "base-tools",
+        slug: "tools",
+        title: "Tools",
+        is_target: true,
+        target_position: 0,
+      }),
+      node("survey", {
+        title: "Soil survey",
+        is_target: true,
+        is_featured: true,
+        target_position: 1,
+      }),
+    ],
+    orders: [{ target_node_id: "tools", node_id: "basics", position: 0 }],
+    projected_edges: [],
+    raw_edges: [],
+    drawn_edges: [{ from_node_id: "basics", to_node_id: "tools" }],
+  };
+
+  function Reader() {
+    const [view, setView] = useState<"graph" | "linear">("graph");
+    const selection = useObjectiveSelection(twoTargets);
+    const { targets } = useMemo(() => buildObjectiveFlow(twoTargets, []), []);
+
+    return (
+      <>
+        <button
+          onClick={() =>
+            setView((current) => (current === "graph" ? "linear" : "graph"))
+          }
+        >
+          Switch view
+        </button>
+
+        {view === "graph" ? (
+          <ObjectiveGraph
+            objective={objective}
+            snapshot={twoTargets}
+            guides={[]}
+            selectedId={selection.selectedId}
+            onSelect={selection.select}
+          />
+        ) : (
+          <ObjectiveFlow
+            objective={objective}
+            targets={targets}
+            targetId={selection.targetId}
+            onSelectTarget={selection.select}
+          />
+        )}
+      </>
+    );
+  }
+
+  const switchView = () =>
+    fireEvent.click(screen.getByRole("button", { name: "Switch view" }));
+  const graphShows = (name: string) =>
+    expect(screen.getByRole("heading", { name })).toBeTruthy();
+  const linearShows = (name: string) =>
+    expect(screen.getByRole("tab", { selected: true }).textContent).toContain(
+      name
+    );
+
+  it("opens both views on the featured target, not the first", () => {
+    render(<Reader />);
+    graphShows("Soil survey");
+
+    switchView();
+    linearShows("Soil survey");
+  });
+
+  it("keeps the chosen target while a prerequisite is inspected", () => {
+    render(<Reader />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    fireEvent.click(screen.getByRole("button", { name: "Basics" }));
+    graphShows("Basics");
+
+    switchView();
+    linearShows("Tools");
+
+    switchView();
+    graphShows("Basics");
+
+    switchView();
+    fireEvent.click(screen.getByRole("tab", { name: /Soil survey/ }));
+    linearShows("Soil survey");
+
+    switchView();
+    graphShows("Soil survey");
   });
 });
 

@@ -1,6 +1,6 @@
 import { Link, createFileRoute, useLocation } from "@tanstack/react-router";
 import { Ellipsis, House, Pencil } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { Breadcrumb } from "@/lib/breadcrumbs";
 import { buildBreadcrumbs } from "@/lib/breadcrumbs";
@@ -22,7 +22,10 @@ import { buildPageMeta } from "@/lib/seo";
 import ObjectiveFlow from "@/components/objective/ObjectiveFlow";
 import { ObjectiveActions } from "@/components/objective/ObjectiveActions";
 import { ObjectiveHeader } from "@/components/objective/ObjectiveHeader";
-import { ObjectiveGraph } from "@/components/objective/ObjectiveGraph";
+import {
+  ObjectiveGraph,
+  useObjectiveSelection,
+} from "@/components/objective/ObjectiveGraph";
 
 export const Route = createFileRoute("/objectives/$slug/")({
   loader: async ({ params: { slug }, abortController }) => {
@@ -170,6 +173,7 @@ function ObjectivePage() {
   const isCurator = identity?.roles.includes("curator") ?? false;
 
   const [view, setView] = useState<"graph" | "linear">("graph");
+  const selection = useObjectiveSelection(snapshot);
 
   const breadcrumbOrigin = useLocation({
     select: (location) => location.state.breadcrumbOrigin,
@@ -179,7 +183,11 @@ function ObjectivePage() {
     breadcrumbOrigin
   );
 
-  const { targets } = buildObjectiveFlow(snapshot, guides);
+  // Memoized so a target change does not rebuild, and remount, the stepper.
+  const { targets } = useMemo(
+    () => buildObjectiveFlow(snapshot, guides),
+    [snapshot, guides]
+  );
 
   return (
     <Shell
@@ -230,9 +238,16 @@ function ObjectivePage() {
           objective={{ slug, title: objective.title }}
           snapshot={snapshot}
           guides={guides}
+          selectedId={selection.selectedId}
+          onSelect={selection.select}
         />
       ) : (
-        <ObjectiveFlow objective={objective} targets={targets} />
+        <ObjectiveFlow
+          objective={objective}
+          targets={targets}
+          targetId={selection.targetId}
+          onSelectTarget={selection.select}
+        />
       )}
     </Shell>
   );

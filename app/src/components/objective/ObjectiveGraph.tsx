@@ -7,7 +7,7 @@ import type {
 import { GuideGraph } from "@/components/graph/GuideGraph";
 import { WalkthroughNode } from "@/components/graph/WalkthroughNode";
 import { WalkthroughPanel } from "@/components/graph/WalkthroughPanel";
-import { buildObjectiveGraph } from "@/lib/objectiveGraph";
+import { buildObjectiveGraph, defaultTargetId } from "@/lib/objectiveGraph";
 
 const nodeTypes = { walkthroughNode: WalkthroughNode };
 
@@ -15,15 +15,45 @@ type ObjectiveGraphProps = {
   objective: Pick<Objective, "slug" | "title">;
   snapshot: ObjectiveSnapshot;
   guides: Array<GuideListItem>;
+  // Owned by the page so a switch to the linear view and back keeps it.
+  selectedId: string | null;
+  onSelect: (id: string) => void;
   // The contribution preview renders an unsaved draft, so nothing may
   // navigate away from it.
   preview?: boolean;
 };
 
+// Inspecting a prerequisite must not change the reader's active target.
+export function useObjectiveSelection(
+  snapshot: Pick<ObjectiveSnapshot, "nodes">
+) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [chosenTargetId, setChosenTargetId] = useState<string | null>(null);
+
+  const isTarget = (id: string) =>
+    snapshot.nodes.some(
+      (node) => node.id === id && node.is_included && node.is_target
+    );
+
+  const targetId =
+    chosenTargetId !== null && isTarget(chosenTargetId)
+      ? chosenTargetId
+      : defaultTargetId(snapshot);
+
+  const select = (id: string) => {
+    setSelectedId(id);
+    if (isTarget(id)) setChosenTargetId(id);
+  };
+
+  return { selectedId, targetId, select };
+}
+
 export function ObjectiveGraph({
   objective,
   snapshot,
   guides,
+  selectedId,
+  onSelect,
   preview = false,
 }: ObjectiveGraphProps) {
   const { walkthrough, nodes, defaultId } = useMemo(
@@ -31,7 +61,6 @@ export function ObjectiveGraph({
     [snapshot, guides]
   );
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -94,7 +123,7 @@ export function ObjectiveGraph({
           nodeType="walkthroughNode"
           nodeTypes={nodeTypes}
           getNodeState={getNodeState}
-          onNodeClick={setSelectedId}
+          onNodeClick={onSelect}
           isFullscreen={isFullscreen}
           onToggleFullscreen={() => setIsFullscreen((value) => !value)}
           showFitView={false}

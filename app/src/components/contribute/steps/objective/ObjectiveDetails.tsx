@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useState } from "react";
+import { slugify, subjectNameSchema } from "@bluelearn/schemas";
 import type { Dispatch, SetStateAction } from "react";
 import type { ObjectiveContribution } from "@/types/contributions";
 
@@ -8,6 +9,7 @@ import { cn } from "@/lib/utils";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -18,6 +20,30 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 type SubjectOption = { id: string; name: string };
+
+type NewSubjectErrors = { name?: string; summary?: string };
+
+// The API refuses these names on save with a generic 400, so catch them here
+// with the same schema and slug rule.
+const validateNewSubject = (
+  name: string,
+  summary: string
+): NewSubjectErrors => {
+  const errors: NewSubjectErrors = {};
+
+  const parsedName = subjectNameSchema.safeParse(name);
+  if (!parsedName.success) {
+    errors.name = parsedName.error.issues[0].message;
+  } else if (!slugify(name)) {
+    errors.name = "Subject must contain at least one letter or number.";
+  }
+
+  if (summary === "") {
+    errors.summary = "Subject summary is required.";
+  }
+
+  return errors;
+};
 
 type PropTypes = {
   Stepper: any;
@@ -53,15 +79,21 @@ export const ObjectiveDetails = ({
     name: string;
     summary: string;
   }>({ name: "", summary: "" });
+  const [newSubjectErrors, setNewSubjectErrors] = useState<NewSubjectErrors>(
+    {}
+  );
 
   const addNewSubject = () => {
-    if (newSubject.name.trim() === "" || newSubject.summary.trim() === "") {
-      return;
-    }
+    const name = newSubject.name.trim();
+    const summary = newSubject.summary.trim();
+
+    const errors = validateNewSubject(name, summary);
+    setNewSubjectErrors(errors);
+    if (errors.name || errors.summary) return;
 
     setObjectiveContData((prev) => ({
       ...prev,
-      newSubjects: [...prev.newSubjects, newSubject],
+      newSubjects: [...prev.newSubjects, { name, summary }],
     }));
 
     setNewSubject({ name: "", summary: "" });
@@ -222,11 +254,20 @@ export const ObjectiveDetails = ({
               type="text"
               maxLength={50}
               placeholder="Enter subject name."
-              className="h-10 rounded-md"
-              value={newSubject.name}
-              onChange={(e) =>
-                setNewSubject((prev) => ({ ...prev, name: e.target.value }))
+              aria-label="New subject name"
+              className={cn(
+                "h-10 rounded-md",
+                newSubjectErrors.name && invalidClass
+              )}
+              aria-invalid={!!newSubjectErrors.name || undefined}
+              aria-describedby={
+                newSubjectErrors.name ? "new-subject-name-error" : undefined
               }
+              value={newSubject.name}
+              onChange={(e) => {
+                setNewSubject((prev) => ({ ...prev, name: e.target.value }));
+                setNewSubjectErrors((prev) => ({ ...prev, name: undefined }));
+              }}
             />
 
             <Input
@@ -234,11 +275,25 @@ export const ObjectiveDetails = ({
               type="text"
               maxLength={500}
               placeholder="Enter summary of new subject."
-              className="h-10 rounded-md"
-              value={newSubject.summary}
-              onChange={(e) =>
-                setNewSubject((prev) => ({ ...prev, summary: e.target.value }))
+              aria-label="New subject summary"
+              className={cn(
+                "h-10 rounded-md",
+                newSubjectErrors.summary && invalidClass
+              )}
+              aria-invalid={!!newSubjectErrors.summary || undefined}
+              aria-describedby={
+                newSubjectErrors.summary
+                  ? "new-subject-summary-error"
+                  : undefined
               }
+              value={newSubject.summary}
+              onChange={(e) => {
+                setNewSubject((prev) => ({ ...prev, summary: e.target.value }));
+                setNewSubjectErrors((prev) => ({
+                  ...prev,
+                  summary: undefined,
+                }));
+              }}
             />
 
             <Button
@@ -251,6 +306,13 @@ export const ObjectiveDetails = ({
               Add Subject
             </Button>
           </div>
+
+          <FieldError id="new-subject-name-error">
+            {newSubjectErrors.name}
+          </FieldError>
+          <FieldError id="new-subject-summary-error">
+            {newSubjectErrors.summary}
+          </FieldError>
 
           {objectiveContData.newSubjects.length > 0 && (
             <div className="flex flex-wrap gap-2 px-1">

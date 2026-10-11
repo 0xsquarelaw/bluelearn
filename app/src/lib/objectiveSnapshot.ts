@@ -44,6 +44,7 @@ export function buildObjectiveFlow(
   const guideBySlug = new Map(guides.map((g) => [g.slug, g]));
 
   const targets = buildSubObjectives(snapshot).map(({ target, steps }) => ({
+    id: target.id,
     slug: target.slug ?? target.id,
     title: target.title ?? "Untitled guide",
     summary: null,

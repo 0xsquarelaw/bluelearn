@@ -59,24 +59,26 @@ export function buildObjectiveGraph(
   return {
     walkthrough: { nodes: walkthroughNodes, edges },
     nodes,
-    defaultId: firstTarget(included)?.id ?? included.at(0)?.id ?? null,
+    defaultId: defaultTargetId(snapshot) ?? included.at(0)?.id ?? null,
   };
 }
 
 // The reader opens where the curator pointed: the featured target, otherwise
 // the first target in the curator's order, the same order the linear view uses.
-function firstTarget(included: ObjectiveSnapshot["nodes"]) {
+export function defaultTargetId(snapshot: Pick<ObjectiveSnapshot, "nodes">) {
   const position = (node: ObjectiveSnapshot["nodes"][number]) =>
     node.target_position ?? Number.POSITIVE_INFINITY;
 
-  return included
-    .filter((node) => node.is_target)
-    .sort(
-      (a, b) =>
-        Number(b.is_featured) - Number(a.is_featured) ||
-        position(a) - position(b)
-    )
-    .at(0);
+  return (
+    snapshot.nodes
+      .filter((node) => node.is_included && node.is_target)
+      .sort(
+        (a, b) =>
+          Number(b.is_featured) - Number(a.is_featured) ||
+          position(a) - position(b)
+      )
+      .at(0)?.id ?? null
+  );
 }
 
 // A skipped node leaves the reader's graph, but what it depended on still leads

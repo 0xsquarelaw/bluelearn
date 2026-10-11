@@ -253,13 +253,20 @@ The projected prerequisite edges among included nodes, computed once at publish 
 
 These rows hold drawn connections and the published projection of the global guide graph. Node IDs preserve connections that involve requests.
 Guide projection excludes null guide base IDs so requests cannot stop traversal through omitted guides.
+
 The reader shows the graph by default. A toggle shows the authored linear order.
 The graph bridges hidden nodes. Contribution Preview uses the same renderer without navigation links.
+
+Both views start at the featured target, or the first target if none is featured.
+Switching views keeps the active target. Inspecting a prerequisite does not change that target.
 
 ### `objective_revision_node_orders`
 
 This table stores the authored reading order for each target. A shared prerequisite can have a different position under each target.
 Rows contain the selected prerequisites. The displayed sequence adds its target last.
+
+An empty saved sequence is a curator choice. Reopening the draft preserves that choice.
+The editor uses canvas prerequisites while a guide walkthrough loads. A failed walkthrough request does not change saved choices.
 
 - `revision_id`: FK to `objective_revisions`.
 - `target_node_id`: the target node whose sequence this row belongs to (FK to `objective_revision_nodes`).
@@ -280,6 +287,9 @@ Subject tags, such as Math, Physics, or Game Development. Subjects are not conta
 
 Guide and objective drafts can propose subjects with a name and summary. Draft subjects have no public slug.
 Guide approval or curator publication of an attached objective publishes the subject. Slug collisions receive a numeric suffix.
+
+Objective Details checks each proposed subject before adding it. The editor uses shared name limits and slug normalization.
+Invalid names or blank summaries show a field-specific error.
 
 ### `guide_revision_subjects`
 

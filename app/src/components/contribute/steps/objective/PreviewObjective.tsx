@@ -16,7 +16,10 @@ import {
   buildDraftObjectiveSnapshot,
   buildSubObjectives,
 } from "@/lib/objectiveSnapshot";
-import { ObjectiveGraph } from "@/components/objective/ObjectiveGraph";
+import {
+  ObjectiveGraph,
+  useObjectiveSelection,
+} from "@/components/objective/ObjectiveGraph";
 import { Button } from "@/components/ui/button";
 
 type PropTypes = {
@@ -158,6 +161,7 @@ export const PreviewObjective = ({
     [objectiveContData]
   );
   const subObjectives = buildSubObjectives(snapshot);
+  const selection = useObjectiveSelection(snapshot);
 
   const guidesBySlug = new Map<string, GuideListItem>();
   for (const guide of guideOptions) {
@@ -325,6 +329,8 @@ export const PreviewObjective = ({
               objective={{ slug: "", title: objectiveContData.title }}
               snapshot={snapshot}
               guides={guideOptions}
+              selectedId={selection.selectedId}
+              onSelect={selection.select}
               preview
             />
           ) : (

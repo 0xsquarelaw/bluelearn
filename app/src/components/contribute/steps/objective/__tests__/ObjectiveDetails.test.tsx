@@ -90,6 +90,48 @@ describe("ObjectiveDetails new subjects", () => {
 
     expect(state.current?.newSubjects).toEqual([]);
     expect(screen.queryByLabelText("Remove Soil Science")).toBeNull();
+
+    const summary = screen.getByLabelText("New subject summary");
+    expect(summary.getAttribute("aria-invalid")).toBe("true");
+    expect(
+      document.getElementById(summary.getAttribute("aria-describedby")!)
+    ).toBe(screen.getByRole("alert"));
+    expect(
+      screen.getByLabelText("New subject name").hasAttribute("aria-invalid")
+    ).toBe(false);
+  });
+
+  it.each(["ab", "  ab  ", "!!!"])(
+    "rejects the name %j that the API refuses",
+    (name) => {
+      const state = renderDetails();
+
+      propose(name, "How soil feeds plants");
+
+      expect(state.current?.newSubjects).toEqual([]);
+
+      const input = screen.getByLabelText<HTMLInputElement>("New subject name");
+      expect(input.value).toBe(name);
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+      expect(
+        document.getElementById(input.getAttribute("aria-describedby")!)
+      ).toBe(screen.getByRole("alert"));
+    }
+  );
+
+  it("adds the trimmed name once the rejected one is corrected", () => {
+    const state = renderDetails();
+
+    propose("ab", "How soil feeds plants");
+    propose("  Art  ", "How soil feeds plants");
+
+    expect(state.current?.newSubjects).toEqual([
+      { name: "Art", summary: "How soil feeds plants" },
+    ]);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      screen.getByLabelText("New subject name").hasAttribute("aria-invalid")
+    ).toBe(false);
   });
 
   it("removes only the chip that was dismissed", () => {
