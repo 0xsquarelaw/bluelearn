@@ -337,6 +337,13 @@ export type Database = {
             foreignKeyName: "guide_revisions_author_id_fkey"
             columns: ["author_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_revisions_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -406,6 +413,13 @@ export type Database = {
             foreignKeyName: "guides_author_id_fkey"
             columns: ["author_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guides_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -452,6 +466,13 @@ export type Database = {
           uploaded_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "media_assets_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "media_assets_uploaded_by_fkey"
             columns: ["uploaded_by"]
@@ -679,6 +700,13 @@ export type Database = {
             foreignKeyName: "learning_path_revisions_author_id_fkey"
             columns: ["author_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_path_revisions_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -728,7 +756,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "learning_paths_created_by_fkey"
+            foreignKeyName: "objectives_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objectives_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -769,6 +804,13 @@ export type Database = {
           status?: Database["public"]["Enums"]["seat_status"]
         }
         Relationships: [
+          {
+            foreignKeyName: "panel_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "panel_members_member_id_fkey"
             columns: ["member_id"]
@@ -957,6 +999,13 @@ export type Database = {
             foreignKeyName: "review_cases_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_cases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1122,6 +1171,13 @@ export type Database = {
             foreignKeyName: "subjects_creator_id_fkey"
             columns: ["creator_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subjects_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1144,6 +1200,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_roles_user_id_fkey"
             columns: ["user_id"]
@@ -1218,6 +1281,13 @@ export type Database = {
             foreignKeyName: "votes_voter_id_fkey"
             columns: ["voter_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "votes_voter_id_fkey"
+            columns: ["voter_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1225,6 +1295,57 @@ export type Database = {
       }
     }
     Views: {
+      dashboard_assignments: {
+        Row: {
+          case_type: Database["public"]["Enums"]["case_type"] | null
+          change_summary: string | null
+          created_at: string | null
+          expires_at: string | null
+          member_id: string | null
+          member_status: Database["public"]["Enums"]["user_status"] | null
+          panel_id: string | null
+          status: Database["public"]["Enums"]["seat_status"] | null
+          title: string | null
+          updated_at: string | null
+          username: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "panel_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "panel_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "panel_members_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "review_panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dashboard_members: {
+        Row: {
+          bio: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string | null
+          roles: string[] | null
+          status: Database["public"]["Enums"]["user_status"] | null
+          updated_at: string | null
+          username: string | null
+        }
+        Relationships: []
+      }
       guide_vote_tallies: {
         Row: {
           downvotes: number | null
@@ -1266,6 +1387,13 @@ export type Database = {
           word_count: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "guides_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "guides_author_id_fkey"
             columns: ["author_id"]

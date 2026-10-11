@@ -12,6 +12,7 @@ export async function listOpenTodos(supabase: DB): Promise<TodoListItem[]> {
       `id, dependent_guide_base_id, title, summary, status, created_at,
        claims:request_claims(count),
        base:guide_bases!requests_dependent_guide_base_id_fkey(
+
          slug,
          canonical:guides!guide_bases_canonical_guide_id_fkey(
            current:guide_revisions!guides_current_revision_id_fkey(title)
@@ -23,7 +24,8 @@ export async function listOpenTodos(supabase: DB): Promise<TodoListItem[]> {
        )`
     )
     .eq("status", "open")
-    .eq("base.status", "published");
+    .eq("base.status", "published")
+    .or("dependent_guide_base_id.is.null,base.not.is.null");
 
   if (error) {
     console.error(error);
@@ -50,14 +52,14 @@ export async function listOpenTodos(supabase: DB): Promise<TodoListItem[]> {
 
 export async function createTodo(
   supabase: DB,
-  guideBaseId: string,
+  guideBaseId: string | undefined,
   title: string,
   summary: string
 ) {
   const { data, error } = await supabase
     .from("requests")
     .insert({
-      dependent_guide_base_id: guideBaseId,
+      dependent_guide_base_id: guideBaseId ?? null,
       title,
       summary,
       status: "open",
