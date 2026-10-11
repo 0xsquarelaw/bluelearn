@@ -107,7 +107,7 @@ describe("buildObjectiveGraph", () => {
     });
   });
 
-  it("bridges a skipped prerequisite and leaves it out of the graph", () => {
+  it("keeps a skipped node in the graph with its drawn edges", () => {
     const { walkthrough } = buildObjectiveGraph(
       {
         nodes: [
@@ -125,11 +125,20 @@ describe("buildObjectiveGraph", () => {
       []
     );
 
-    expect(walkthrough.nodes.map((node) => node.id).sort()).toEqual(["a", "t"]);
-    expect(edgeKeys(walkthrough.edges)).toEqual(["a->t"]);
+    expect(walkthrough.nodes.map((node) => node.id).sort()).toEqual([
+      "a",
+      "skipped",
+      "skipped-request",
+      "t",
+    ]);
+    expect(edgeKeys(walkthrough.edges)).toEqual([
+      "a->skipped",
+      "skipped->skipped-request",
+      "skipped-request->t",
+    ]);
   });
 
-  it("does not bridge through an included node or repeat an edge", () => {
+  it("keeps every drawn edge once", () => {
     const { walkthrough } = buildObjectiveGraph(
       {
         nodes: [guideNode("a"), guideNode("b"), guideNode("t")],

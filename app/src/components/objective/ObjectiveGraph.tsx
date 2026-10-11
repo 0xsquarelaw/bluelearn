@@ -16,8 +16,9 @@ type ObjectiveGraphProps = {
   snapshot: ObjectiveSnapshot;
   guides: Array<GuideListItem>;
   // Owned by the page so a switch to the linear view and back keeps it.
+  // Null means nothing was clicked yet, so the panel stays hidden.
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  onSelect: (id: string | null) => void;
   // The contribution preview renders an unsaved draft, so nothing may
   // navigate away from it.
   preview?: boolean;
@@ -40,9 +41,9 @@ export function useObjectiveSelection(
       ? chosenTargetId
       : defaultTargetId(snapshot);
 
-  const select = (id: string) => {
+  const select = (id: string | null) => {
     setSelectedId(id);
-    if (isTarget(id)) setChosenTargetId(id);
+    if (id !== null && isTarget(id)) setChosenTargetId(id);
   };
 
   return { selectedId, targetId, select };
@@ -98,16 +99,27 @@ export function ObjectiveGraph({
   }
 
   const selected = nodes.get(selectedNode.id)!;
+  // A click on the open node closes the panel again.
+  const showPanel = selectedId !== null;
+  const onNodeClick = (id: string) => onSelect(id === selectedId ? null : id);
 
   return (
-    <div className="flex flex-col-reverse md:grid md:grid-cols-[320px_1fr]">
-      <WalkthroughPanel
-        node={selectedNode}
-        objective={objective}
-        guideSlug={selected.guideSlug}
-        isRequest={selected.isRequest}
-        preview={preview}
-      />
+    <div
+      className={
+        showPanel
+          ? "flex flex-col-reverse md:grid md:grid-cols-[320px_1fr]"
+          : "flex flex-col"
+      }
+    >
+      {showPanel && (
+        <WalkthroughPanel
+          node={selectedNode}
+          objective={objective}
+          guideSlug={selected.guideSlug}
+          isRequest={selected.isRequest}
+          preview={preview}
+        />
+      )}
       <div
         className={
           isFullscreen
@@ -123,7 +135,7 @@ export function ObjectiveGraph({
           nodeType="walkthroughNode"
           nodeTypes={nodeTypes}
           getNodeState={getNodeState}
-          onNodeClick={onSelect}
+          onNodeClick={onNodeClick}
           isFullscreen={isFullscreen}
           onToggleFullscreen={() => setIsFullscreen((value) => !value)}
           showFitView={false}

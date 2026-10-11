@@ -307,7 +307,7 @@ export const PreviewObjective = ({
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-4">
             <h3 className="font-mono text-[12px] tracking-[0.08em] text-muted-foreground uppercase">
-              Sub-Objectives
+              {view === "graph" ? "Objective Graph" : "Sub-Objectives"}
             </h3>
 
             <Button

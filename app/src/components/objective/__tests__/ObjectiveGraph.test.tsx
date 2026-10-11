@@ -33,23 +33,29 @@ vi.mock("@/routes/guides/$slug/index", () => ({
   Route: { to: "/guides/$slug" },
 }));
 
-// xyflow needs real layout; one button per node keeps clicks and fullscreen
-// reachable in jsdom.
+// xyflow needs real layout; one button per node keeps clicks, selection and
+// fullscreen reachable in jsdom.
 vi.mock("@/components/graph/GuideGraph", () => ({
   GuideGraph: ({
     walkthroughData,
     onNodeClick,
+    getNodeState,
     isFullscreen,
     onToggleFullscreen,
   }: {
     walkthroughData: Walkthrough;
     onNodeClick: (id: string) => void;
+    getNodeState: (id: string) => { isSelected: boolean };
     isFullscreen: boolean;
     onToggleFullscreen: () => void;
   }) => (
     <div data-testid="graph" data-fullscreen={String(isFullscreen)}>
       {walkthroughData.nodes.map((node) => (
-        <button key={node.id} onClick={() => onNodeClick(node.id)}>
+        <button
+          key={node.id}
+          data-selected={String(getNodeState(node.id).isSelected)}
+          onClick={() => onNodeClick(node.id)}
+        >
           {node.title}
         </button>
       ))}
@@ -99,6 +105,9 @@ const snapshot: ObjectiveSnapshot = {
 const objective = { slug: "proofs", title: "Proofs" };
 
 const openGuide = () => screen.queryByRole("link", { name: "Open Guide" });
+const panel = () => screen.queryByRole("complementary");
+const highlighted = (name: string) =>
+  screen.getByRole("button", { name }).getAttribute("data-selected");
 
 function Graph({
   snapshot: graphSnapshot,
@@ -126,13 +135,28 @@ describe("ObjectiveGraph", () => {
     cleanup();
   });
 
-  it("opens on the target request with no link anywhere in the panel", () => {
+  it("highlights the target request and keeps the panel closed until a click", () => {
     render(<Graph snapshot={snapshot} />);
 
+    expect(panel()).toBeNull();
+    expect(highlighted("Termination proofs")).toBe("true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Termination proofs" }));
     expect(
       screen.getByRole("heading", { name: "Termination proofs" })
     ).toBeTruthy();
     expect(screen.queryAllByRole("link")).toHaveLength(0);
+  });
+
+  it("closes the panel on a second click of the open node", () => {
+    render(<Graph snapshot={snapshot} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Loops" }));
+    expect(panel()).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Loops" }));
+    expect(panel()).toBeNull();
+    expect(highlighted("Termination proofs")).toBe("true");
   });
 
   it("offers the guide's own page for a guide and takes it away for a request", () => {
@@ -247,7 +271,8 @@ describe("an objective's graph and linear views", () => {
 
   it("opens both views on the featured target, not the first", () => {
     render(<Reader />);
-    graphShows("Soil survey");
+    expect(panel()).toBeNull();
+    expect(highlighted("Soil survey")).toBe("true");
 
     switchView();
     linearShows("Soil survey");
