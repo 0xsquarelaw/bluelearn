@@ -107,8 +107,8 @@ export function ObjectiveGraph({
     <div
       className={
         isOpen
-          ? "flex flex-col-reverse md:grid md:grid-cols-[320px_1fr]"
-          : "flex flex-col-reverse md:grid md:grid-cols-[48px_1fr]"
+          ? "flex flex-col-reverse gap-3 md:grid md:grid-cols-[320px_1fr] md:gap-3"
+          : "flex flex-col-reverse gap-3 md:grid md:grid-cols-[48px_1fr] md:gap-2"
       }
     >
       {isOpen ? (
@@ -121,7 +121,7 @@ export function ObjectiveGraph({
           onClose={() => onSelect(null)}
         />
       ) : (
-        <div className="flex items-center justify-center border-t py-2 md:h-full md:items-start md:border-t-0 md:border-r md:py-4">
+        <div className="flex items-center justify-center py-2 md:h-full md:items-start md:py-4">
           <button
             type="button"
             onClick={() => onSelect(selectedNode.id)}

@@ -60,7 +60,7 @@ export function WalkthroughPanel(props: WalkthroughPanelProps) {
   }
 
   return (
-    <aside className="relative flex flex-col gap-6 overflow-y-auto border-t px-6 py-6 md:h-full md:border-t-0 md:border-r">
+    <aside className="relative flex flex-col gap-6 overflow-y-auto px-6 py-6 md:h-full">
       {onClose && (
         <button
           type="button"
