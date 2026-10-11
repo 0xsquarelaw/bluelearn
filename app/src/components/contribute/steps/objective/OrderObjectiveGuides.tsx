@@ -4,7 +4,6 @@ import {
   Clock,
   Info,
   ListOrdered,
-  Loader2,
   Maximize,
   Minimize,
   Replace,
@@ -118,12 +117,16 @@ export const OrderObjectiveGuides = ({
     return () => controller.abort();
   }, [targetGuideSlug]);
 
+  // The canvas remains usable while a guide walkthrough is unavailable.
   const walkthroughData = useMemo(() => {
     if (!targetNode) return null;
-    if (targetNode.type === "guide_request")
-      return prerequisiteWalkthrough(graph, targetNode.id);
-    if (fetched?.slug !== targetNode.guideSlug) return null;
-    return prerequisiteWalkthrough(graph, targetNode.id, fetched.walkthrough);
+
+    const fetchedWalkthrough =
+      targetNode.type === "guide" && fetched?.slug === targetNode.guideSlug
+        ? fetched.walkthrough
+        : undefined;
+
+    return prerequisiteWalkthrough(graph, targetNode.id, fetchedWalkthrough);
   }, [targetNode, graph, fetched]);
 
   const { directPrereqs, directDependents } = useMemo(() => {
@@ -644,10 +647,9 @@ export const OrderObjectiveGuides = ({
                   isFullscreen={isFullscreen}
                 />
               ) : (
-                <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                  <span className="text-sm">Computing graph...</span>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Select a target to view its prerequisites.
+                </p>
               )}
             </CardContent>
           </Card>

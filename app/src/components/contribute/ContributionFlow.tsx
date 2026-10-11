@@ -181,29 +181,31 @@ const objectiveDataFromRevision = (
         (b.target_position ?? Number.POSITIVE_INFINITY)
     );
 
+  // Saved curation leaves order rows or excluded prerequisites. Preserve
+  // empty target sequences once that persisted choice exists.
+  const curated =
+    data.snapshot.orders.length > 0 ||
+    data.snapshot.nodes.some((n) => !n.is_included);
+
   return {
     title: data.revision.title ?? "",
     summary: data.revision.summary ?? "",
     changeSummary: data.revision.change_summary ?? "",
     targets: targetNodes.map((n) => n.id),
     featuredSubObjective: targetNodes.find((n) => n.is_featured)?.id ?? "",
-    subObjectives: targetNodes.flatMap((n) => {
-      const sequence = data.snapshot.orders
-        .filter((o) => o.target_node_id === n.id)
-        .map((o) => o.node_id);
+    subObjectives: curated
+      ? targetNodes.map((n) => {
+          const sequence = data.snapshot.orders
+            .filter((o) => o.target_node_id === n.id)
+            .map((o) => o.node_id);
 
-      if (sequence.length === 0) {
-        return [];
-      }
-
-      return [
-        {
-          targetNodeId: n.id,
-          selectedNodeIds: sequence,
-          curatedSequence: sequence,
-        },
-      ];
-    }),
+          return {
+            targetNodeId: n.id,
+            selectedNodeIds: sequence,
+            curatedSequence: sequence,
+          };
+        })
+      : [],
 
     subjects: data.subjects
       .filter((s) => s.status === "published")
