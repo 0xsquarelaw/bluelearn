@@ -10,7 +10,8 @@ vi.mock("@/components/contribute/StepperActionHeader", () => ({
   StepperActionHeader: () => null,
 }));
 // The card is the boundary here; graph interactions have their own coverage.
-vi.mock("@/components/objective/ObjectiveGraph", () => ({
+vi.mock("@/components/objective/ObjectiveGraph", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   ObjectiveGraph: () => null,
 }));
 

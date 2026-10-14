@@ -44,17 +44,21 @@ export function buildObjectiveFlow(
   const guideBySlug = new Map(guides.map((g) => [g.slug, g]));
 
   const targets = buildSubObjectives(snapshot).map(({ target, steps }) => ({
+    id: target.id,
     slug: target.slug ?? target.id,
     title: target.title ?? "Untitled guide",
     summary: null,
     guides: steps.map((node) => {
       const guide = node.slug ? guideBySlug.get(node.slug) : undefined;
+
       return {
         guide: {
-          slug: node.slug ?? "",
+          id: node.id,
+          slug: node.slug,
+          isRequest: node.guide_base_id === null,
           title: node.title ?? "Untitled guide",
           author: guide?.author,
-          summary: guide?.summary,
+          summary: node.summary ?? guide?.summary,
           created_at: guide
             ? formatDate(new Date(guide.created_at))
             : undefined,

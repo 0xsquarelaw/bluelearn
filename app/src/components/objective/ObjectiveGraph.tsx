@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { PanelLeftOpen } from "lucide-react";
 import type {
   GuideListItem,
   Objective,
@@ -7,7 +8,7 @@ import type {
 import { GuideGraph } from "@/components/graph/GuideGraph";
 import { WalkthroughNode } from "@/components/graph/WalkthroughNode";
 import { WalkthroughPanel } from "@/components/graph/WalkthroughPanel";
-import { buildObjectiveGraph } from "@/lib/objectiveGraph";
+import { buildObjectiveGraph, defaultTargetId } from "@/lib/objectiveGraph";
 
 const nodeTypes = { walkthroughNode: WalkthroughNode };
 
@@ -15,15 +16,46 @@ type ObjectiveGraphProps = {
   objective: Pick<Objective, "slug" | "title">;
   snapshot: ObjectiveSnapshot;
   guides: Array<GuideListItem>;
+  // Owned by the page so a switch to the linear view and back keeps it.
+  // Null means nothing was clicked yet, so the panel stays hidden.
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
   // The contribution preview renders an unsaved draft, so nothing may
   // navigate away from it.
   preview?: boolean;
 };
 
+// Inspecting a prerequisite must not change the reader's active target.
+export function useObjectiveSelection(
+  snapshot: Pick<ObjectiveSnapshot, "nodes">
+) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [chosenTargetId, setChosenTargetId] = useState<string | null>(null);
+
+  const isTarget = (id: string) =>
+    snapshot.nodes.some(
+      (node) => node.id === id && node.is_included && node.is_target
+    );
+
+  const targetId =
+    chosenTargetId !== null && isTarget(chosenTargetId)
+      ? chosenTargetId
+      : defaultTargetId(snapshot);
+
+  const select = (id: string | null) => {
+    setSelectedId(id);
+    if (id !== null && isTarget(id)) setChosenTargetId(id);
+  };
+
+  return { selectedId, targetId, select };
+}
+
 export function ObjectiveGraph({
   objective,
   snapshot,
   guides,
+  selectedId,
+  onSelect,
   preview = false,
 }: ObjectiveGraphProps) {
   const { walkthrough, nodes, defaultId } = useMemo(
@@ -31,7 +63,6 @@ export function ObjectiveGraph({
     [snapshot, guides]
   );
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -69,16 +100,39 @@ export function ObjectiveGraph({
   }
 
   const selected = nodes.get(selectedNode.id)!;
+  // Closed, the panel folds into a rail; the rail opens on the default node.
+  const isOpen = selectedId !== null;
 
   return (
-    <div className="flex flex-col-reverse md:grid md:grid-cols-[320px_1fr]">
-      <WalkthroughPanel
-        node={selectedNode}
-        objective={objective}
-        guideSlug={selected.guideSlug}
-        isRequest={selected.isRequest}
-        preview={preview}
-      />
+    <div
+      className={
+        isOpen
+          ? "flex flex-col-reverse gap-3 md:grid md:grid-cols-[320px_1fr] md:gap-3"
+          : "flex flex-col-reverse gap-3 md:grid md:grid-cols-[48px_1fr] md:gap-2"
+      }
+    >
+      {isOpen ? (
+        <WalkthroughPanel
+          node={selectedNode}
+          objective={objective}
+          guideSlug={selected.guideSlug}
+          isRequest={selected.isRequest}
+          preview={preview}
+          onClose={() => onSelect(null)}
+        />
+      ) : (
+        <div className="flex items-center justify-center py-2 md:h-full md:items-start md:py-4">
+          <button
+            type="button"
+            onClick={() => onSelect(selectedNode.id)}
+            aria-label="Open panel"
+            title="Open panel"
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <PanelLeftOpen className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       <div
         className={
           isFullscreen
@@ -94,7 +148,7 @@ export function ObjectiveGraph({
           nodeType="walkthroughNode"
           nodeTypes={nodeTypes}
           getNodeState={getNodeState}
-          onNodeClick={setSelectedId}
+          onNodeClick={onSelect}
           isFullscreen={isFullscreen}
           onToggleFullscreen={() => setIsFullscreen((value) => !value)}
           showFitView={false}

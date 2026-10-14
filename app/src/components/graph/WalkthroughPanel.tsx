@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PanelLeftClose } from "lucide-react";
 import type { Objective, Walkthrough } from "@bluelearn/schemas";
 import type { BreadcrumbOrigin } from "@/lib/breadcrumbs";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,9 @@ type ObjectiveContext = {
   guideSlug: string | null;
   isRequest: boolean;
   preview: boolean;
+  // The objective page opens the panel from a node click and offers a way to
+  // fold it back into the rail.
+  onClose?: () => void;
 };
 
 type WalkthroughPanelProps = {
@@ -27,6 +30,7 @@ type WalkthroughPanelProps = {
 export function WalkthroughPanel(props: WalkthroughPanelProps) {
   const { node, breadcrumbOrigin } = props;
   const isRequest = "objective" in props && props.isRequest;
+  const onClose = "objective" in props ? props.onClose : undefined;
 
   let back: { label: string; path: string } | null;
   let openSlug: string | null;
@@ -56,7 +60,18 @@ export function WalkthroughPanel(props: WalkthroughPanelProps) {
   }
 
   return (
-    <aside className="flex flex-col gap-6 overflow-y-auto border-t px-6 py-6 md:h-full md:border-t-0 md:border-r">
+    <aside className="relative flex flex-col gap-6 overflow-y-auto px-6 py-6 md:h-full">
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close panel"
+          title="Close panel"
+          className="absolute top-4 right-4 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <PanelLeftClose className="h-4 w-4" />
+        </button>
+      )}
       {back && (
         <Link
           to={back.path}
